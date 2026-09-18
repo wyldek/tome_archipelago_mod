@@ -31,6 +31,34 @@ from .bridge_mailbox import (
 LOG = logging.getLogger("ToMEArchipelago")
 PERSIST_CATEGORY = "tome_archipelago"
 PERSIST_MAILBOX_KEY = "mailbox"
+MAILBOX_MARKER_NAME = "mailbox-info.json"
+MAILBOX_MARKER_SCHEMA = 1
+MAILBOX_MARKER_GAME = "Tales of Maj'Eyal"
+MAILBOX_MARKER_ADDON = "tome-archipelago"
+
+
+def _mailbox_marker_valid(path: Path) -> bool:
+    if not path.is_dir():
+        return False
+    try:
+        marker = read_json(path / MAILBOX_MARKER_NAME, limit=4096)
+    except (ValidationError, OSError):
+        return False
+    return bool(
+        isinstance(marker, dict)
+        and marker.get("schema") == MAILBOX_MARKER_SCHEMA
+        and marker.get("game") == MAILBOX_MARKER_GAME
+        and marker.get("addon") == MAILBOX_MARKER_ADDON
+    )
+
+
+def _mailbox_error(path: Path) -> str:
+    return (
+        f"{path} is not a Tales of Maj'Eyal Archipelago mailbox. "
+        f"Expected a valid {MAILBOX_MARKER_NAME} written by the ToME addon. "
+        "Launch ToME once with the matching addon installed, then select the exact "
+        "tome/archipelago directory."
+    )
 
 
 def _shop_location_codes(contract: dict) -> list[int]:
@@ -67,29 +95,39 @@ def _scout_snapshot(ctx) -> list[dict]:
 def _resolve_mailbox(value: str | None) -> Path:
     if value:
         path = Path(value).expanduser().resolve()
+        if not _mailbox_marker_valid(path):
+            raise SystemExit(_mailbox_error(path))
         Utils.persistent_store(PERSIST_CATEGORY, PERSIST_MAILBOX_KEY, str(path))
         return path
 
-    cached = Utils.persistent_load().get(PERSIST_CATEGORY, {}).get(PERSIST_MAILBOX_KEY)
-    if cached:
-        return Path(cached).expanduser().resolve()
+    cached_value = Utils.persistent_load().get(PERSIST_CATEGORY, {}).get(PERSIST_MAILBOX_KEY)
+    cached = Path(cached_value).expanduser().resolve() if cached_value else None
+    if cached and _mailbox_marker_valid(cached):
+        return cached
 
-    # Launcher components using a custom func run in a spawned process without a
-    # usable terminal. Use AP's native directory picker rather than input(), so
-    # first launch works from ArchipelagoLauncher.exe as well as from a shell.
-    selected = Utils.open_directory(
-        "Select Tales of Maj'Eyal Archipelago mailbox directory",
-        str(Path.home()),
-    )
-    if not selected:
-        raise SystemExit(
-            "A ToME Archipelago mailbox directory is required. "
-            "Launch ToME once with the addon installed, then select its tome/archipelago directory."
+    suggest = cached if cached and cached.is_dir() else Path.home()
+    while True:
+        selected = Utils.open_directory(
+            "Select Tales of Maj'Eyal Archipelago mailbox directory",
+            str(suggest),
         )
-    path = Path(selected).expanduser().resolve()
-    Utils.persistent_store(PERSIST_CATEGORY, PERSIST_MAILBOX_KEY, str(path))
-    return path
-
+        if not selected:
+            raise SystemExit(
+                "A valid ToME Archipelago mailbox directory is required. "
+                "Launch ToME once with the matching addon installed, then select "
+                "its exact tome/archipelago directory."
+            )
+        path = Path(selected).expanduser().resolve()
+        if _mailbox_marker_valid(path):
+            Utils.persistent_store(PERSIST_CATEGORY, PERSIST_MAILBOX_KEY, str(path))
+            return path
+        Utils.messagebox(
+            "Invalid ToME Archipelago mailbox",
+            _mailbox_error(path),
+            error=True,
+        )
+        if path.is_dir():
+            suggest = path
 
 class ToMECommands(ClientCommandProcessor):
     def _cmd_tome(self):
@@ -243,7 +281,6 @@ async def _watcher(ctx: ToMEContext):
 async def _run(args) -> None:
     mailbox = _resolve_mailbox(args.mailbox)
     ctx = ToMEContext(args.connect, args.password, mailbox, args.name)
-    ctx.mailbox.mkdir(parents=True, exist_ok=True)
     with exclusive_bridge(ctx.mailbox / "bridge.lock"):
         ctx.server_task = asyncio.create_task(server_loop(ctx), name="AP server")
         if gui_enabled:

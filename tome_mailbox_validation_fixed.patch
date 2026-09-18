@@ -1,0 +1,351 @@
+diff --git a/addon/tome-archipelago/overload/mod/class/Archipelago.lua b/addon/tome-archipelago/overload/mod/class/Archipelago.lua
+--- a/addon/tome-archipelago/overload/mod/class/Archipelago.lua
++++ b/addon/tome-archipelago/overload/mod/class/Archipelago.lua
+@@ -38,4 +38,12 @@
+ M.read=read
+ M.write=write
+ 
++function M.ensureMailboxMarker()
++  write("mailbox-info.json",{
++    schema=1,
++    game="Tales of Maj'Eyal",
++    addon="tome-archipelago",
++  })
++end
++
+ function M.isCharacter(actor)
+diff --git a/addon/tome-archipelago/hooks/load.lua b/addon/tome-archipelago/hooks/load.lua
+--- a/addon/tome-archipelago/hooks/load.lua
++++ b/addon/tome-archipelago/hooks/load.lua
+@@ -4,5 +4,9 @@
+ class:bindHook("ToME:load", function(self, data)
+   local AP = require "mod.class.Archipelago"
++  local marked, marker_err = pcall(AP.ensureMailboxMarker)
++  if not marked then
++    print("[Archipelago] Mailbox marker write failed: "..tostring(marker_err))
++  end
+   local ok, err = pcall(function()
+     Birther:loadDefinition("/data-archipelago/birth.lua")
+   end)
+diff --git a/apworld/tome/client.py b/apworld/tome/client.py
+--- a/apworld/tome/client.py
++++ b/apworld/tome/client.py
+@@ -31,6 +31,34 @@
+ LOG = logging.getLogger("ToMEArchipelago")
+ PERSIST_CATEGORY = "tome_archipelago"
+ PERSIST_MAILBOX_KEY = "mailbox"
++MAILBOX_MARKER_NAME = "mailbox-info.json"
++MAILBOX_MARKER_SCHEMA = 1
++MAILBOX_MARKER_GAME = "Tales of Maj'Eyal"
++MAILBOX_MARKER_ADDON = "tome-archipelago"
++
++
++def _mailbox_marker_valid(path: Path) -> bool:
++    if not path.is_dir():
++        return False
++    try:
++        marker = read_json(path / MAILBOX_MARKER_NAME, limit=4096)
++    except (ValidationError, OSError):
++        return False
++    return bool(
++        isinstance(marker, dict)
++        and marker.get("schema") == MAILBOX_MARKER_SCHEMA
++        and marker.get("game") == MAILBOX_MARKER_GAME
++        and marker.get("addon") == MAILBOX_MARKER_ADDON
++    )
++
++
++def _mailbox_error(path: Path) -> str:
++    return (
++        f"{path} is not a Tales of Maj'Eyal Archipelago mailbox. "
++        f"Expected a valid {MAILBOX_MARKER_NAME} written by the ToME addon. "
++        "Launch ToME once with the matching addon installed, then select the exact "
++        "tome/archipelago directory."
++    )
+ 
+ 
+ def _shop_location_codes(contract: dict) -> list[int]:
+@@ -67,28 +95,41 @@
+ def _resolve_mailbox(value: str | None) -> Path:
+     if value:
+         path = Path(value).expanduser().resolve()
++        if not _mailbox_marker_valid(path):
++            raise SystemExit(_mailbox_error(path))
+         Utils.persistent_store(PERSIST_CATEGORY, PERSIST_MAILBOX_KEY, str(path))
+         return path
+ 
+-    cached = Utils.persistent_load().get(PERSIST_CATEGORY, {}).get(PERSIST_MAILBOX_KEY)
+-    if cached:
+-        return Path(cached).expanduser().resolve()
++    cached_value = Utils.persistent_load().get(PERSIST_CATEGORY, {}).get(PERSIST_MAILBOX_KEY)
++    cached = Path(cached_value).expanduser().resolve() if cached_value else None
++    if cached and _mailbox_marker_valid(cached):
++        return cached
+ 
+-    # Launcher components using a custom func run in a spawned process without a
+-    # usable terminal. Use AP's native directory picker rather than input(), so
+-    # first launch works from ArchipelagoLauncher.exe as well as from a shell.
+-    selected = Utils.open_directory(
+-        "Select Tales of Maj'Eyal Archipelago mailbox directory",
+-        str(Path.home()),
+-    )
+-    if not selected:
+-        raise SystemExit(
+-            "A ToME Archipelago mailbox directory is required. "
+-            "Launch ToME once with the addon installed, then select its tome/archipelago directory."
++    suggest = cached if cached and cached.is_dir() else Path.home()
++    while True:
++        # Launcher components using a custom func run in a spawned process without
++        # a usable terminal. Use AP's native directory picker rather than input().
++        selected = Utils.open_directory(
++            "Select Tales of Maj'Eyal Archipelago mailbox directory",
++            str(suggest),
+         )
+-    path = Path(selected).expanduser().resolve()
+-    Utils.persistent_store(PERSIST_CATEGORY, PERSIST_MAILBOX_KEY, str(path))
+-    return path
++        if not selected:
++            raise SystemExit(
++                "A valid ToME Archipelago mailbox directory is required. "
++                "Launch ToME once with the matching addon installed, then select "
++                "its exact tome/archipelago directory."
++            )
++        path = Path(selected).expanduser().resolve()
++        if _mailbox_marker_valid(path):
++            Utils.persistent_store(PERSIST_CATEGORY, PERSIST_MAILBOX_KEY, str(path))
++            return path
++        Utils.messagebox(
++            "Invalid ToME Archipelago mailbox",
++            _mailbox_error(path),
++            error=True,
++        )
++        if path.is_dir():
++            suggest = path
+ 
+ class ToMECommands(ClientCommandProcessor):
+     def _cmd_tome(self):
+@@ -243,5 +284,4 @@
+ async def _run(args) -> None:
+     mailbox = _resolve_mailbox(args.mailbox)
+     ctx = ToMEContext(args.connect, args.password, mailbox, args.name)
+-    ctx.mailbox.mkdir(parents=True, exist_ok=True)
+     with exclusive_bridge(ctx.mailbox / "bridge.lock"):
+diff --git a/tome_ap/client.py b/tome_ap/client.py
+--- a/tome_ap/client.py
++++ b/tome_ap/client.py
+@@ -29,6 +29,34 @@
+ LOG = logging.getLogger("ToMEArchipelago")
+ PERSIST_CATEGORY = "tome_archipelago"
+ PERSIST_MAILBOX_KEY = "mailbox"
++MAILBOX_MARKER_NAME = "mailbox-info.json"
++MAILBOX_MARKER_SCHEMA = 1
++MAILBOX_MARKER_GAME = "Tales of Maj'Eyal"
++MAILBOX_MARKER_ADDON = "tome-archipelago"
++
++
++def _mailbox_marker_valid(path: Path) -> bool:
++    if not path.is_dir():
++        return False
++    try:
++        marker = read_json(path / MAILBOX_MARKER_NAME, limit=4096)
++    except (ValidationError, OSError):
++        return False
++    return bool(
++        isinstance(marker, dict)
++        and marker.get("schema") == MAILBOX_MARKER_SCHEMA
++        and marker.get("game") == MAILBOX_MARKER_GAME
++        and marker.get("addon") == MAILBOX_MARKER_ADDON
++    )
++
++
++def _mailbox_error(path: Path) -> str:
++    return (
++        f"{path} is not a Tales of Maj'Eyal Archipelago mailbox. "
++        f"Expected a valid {MAILBOX_MARKER_NAME} written by the ToME addon. "
++        "Launch ToME once with the matching addon installed, then select the exact "
++        "tome/archipelago directory."
++    )
+ 
+ 
+ def _shop_location_codes(contract: dict) -> list[int]:
+@@ -117,20 +145,39 @@
+ def _resolve_mailbox(Utils, value: str | None) -> Path:
+     if value:
+         path = Path(value).expanduser().resolve()
++        if not _mailbox_marker_valid(path):
++            raise SystemExit(_mailbox_error(path))
+         Utils.persistent_store(PERSIST_CATEGORY, PERSIST_MAILBOX_KEY, str(path))
+         return path
+-    cached = Utils.persistent_load().get(PERSIST_CATEGORY, {}).get(PERSIST_MAILBOX_KEY)
+-    if cached:
+-        return Path(cached).expanduser().resolve()
+-    selected = Utils.open_directory(
+-        "Select Tales of Maj'Eyal Archipelago mailbox directory",
+-        str(Path.home()),
+-    )
+-    if not selected:
+-        raise SystemExit("A ToME Archipelago mailbox directory is required.")
+-    path = Path(selected).expanduser().resolve()
+-    Utils.persistent_store(PERSIST_CATEGORY, PERSIST_MAILBOX_KEY, str(path))
+-    return path
++
++    cached_value = Utils.persistent_load().get(PERSIST_CATEGORY, {}).get(PERSIST_MAILBOX_KEY)
++    cached = Path(cached_value).expanduser().resolve() if cached_value else None
++    if cached and _mailbox_marker_valid(cached):
++        return cached
++
++    suggest = cached if cached and cached.is_dir() else Path.home()
++    while True:
++        selected = Utils.open_directory(
++            "Select Tales of Maj'Eyal Archipelago mailbox directory",
++            str(suggest),
++        )
++        if not selected:
++            raise SystemExit(
++                "A valid ToME Archipelago mailbox directory is required. "
++                "Launch ToME once with the matching addon installed, then select "
++                "its exact tome/archipelago directory."
++            )
++        path = Path(selected).expanduser().resolve()
++        if _mailbox_marker_valid(path):
++            Utils.persistent_store(PERSIST_CATEGORY, PERSIST_MAILBOX_KEY, str(path))
++            return path
++        Utils.messagebox(
++            "Invalid ToME Archipelago mailbox",
++            _mailbox_error(path),
++            error=True,
++        )
++        if path.is_dir():
++            suggest = path
+ 
+ def main(argv=None):
+     argv = list(sys.argv[1:] if argv is None else argv)
+@@ -326,5 +373,4 @@
+     async def run(args):
+         mailbox = _resolve_mailbox(Utils, args.mailbox)
+         ctx = Context(args.connect, args.password, mailbox, args.name)
+-        ctx.mailbox.mkdir(parents=True, exist_ok=True)
+         with exclusive_bridge(ctx.mailbox / "bridge.lock"):
+diff --git a/tests/test_client_launch.py b/tests/test_client_launch.py
+--- a/tests/test_client_launch.py
++++ b/tests/test_client_launch.py
+@@ -1,6 +1,47 @@
+ from pathlib import Path
++import json
++import pytest
+ 
+-from tome_ap.client import _find_ap
++from tome_ap.client import (
++    MAILBOX_MARKER_NAME,
++    _find_ap,
++    _mailbox_marker_valid,
++    _resolve_mailbox,
++)
++
++
++class FakeUtils:
++    def __init__(self, cached: Path | None = None, selections=()):
++        self.storage = {}
++        if cached is not None:
++            self.storage = {"tome_archipelago": {"mailbox": str(cached)}}
++        self.selections = iter(selections)
++        self.messages = []
++
++    def persistent_load(self):
++        return self.storage
++
++    def persistent_store(self, category, key, value):
++        self.storage.setdefault(category, {})[key] = value
++
++    def open_directory(self, title, suggest):
++        return next(self.selections, None)
++
++    def messagebox(self, title, text, error=False):
++        self.messages.append((title, text, error))
++
++
++def make_mailbox(path: Path):
++    path.mkdir()
++    (path / MAILBOX_MARKER_NAME).write_text(
++        json.dumps({
++            "schema": 1,
++            "game": "Tales of Maj'Eyal",
++            "addon": "tome-archipelago",
++        }),
++        encoding="utf-8",
++    )
++    return path
+ 
+ 
+ def test_standalone_detects_source_root(tmp_path: Path):
+@@ -22,5 +63,41 @@
+     root = Path(__file__).resolve().parents[1]
+     text = (root / "apworld" / "tome" / "client.py").read_text(encoding="utf-8")
+     assert "Utils.open_directory(" in text
++    assert "mailbox-info.json" in text
++    assert "_mailbox_marker_valid" in text
+     assert "ctx.run_gui()" in text
+     assert 'input("Mailbox directory:' not in text
++
++
++def test_mailbox_marker_validation(tmp_path: Path):
++    good = make_mailbox(tmp_path / "good")
++    bad = tmp_path / "bad"
++    bad.mkdir()
++    assert _mailbox_marker_valid(good)
++    assert not _mailbox_marker_valid(bad)
++
++
++def test_explicit_invalid_mailbox_is_rejected(tmp_path: Path):
++    bad = tmp_path / "bad"
++    bad.mkdir()
++    with pytest.raises(SystemExit, match="not a Tales of Maj'Eyal Archipelago mailbox"):
++        _resolve_mailbox(FakeUtils(), str(bad))
++
++
++def test_stale_cached_mailbox_reprompts_and_replaces_cache(tmp_path: Path):
++    bad = tmp_path / "bad"
++    bad.mkdir()
++    good = make_mailbox(tmp_path / "good")
++    utils = FakeUtils(cached=bad, selections=[str(good)])
++    assert _resolve_mailbox(utils, None) == good.resolve()
++    assert utils.storage["tome_archipelago"]["mailbox"] == str(good.resolve())
++
++
++def test_invalid_picker_selection_is_not_cached(tmp_path: Path):
++    bad = tmp_path / "bad"
++    bad.mkdir()
++    good = make_mailbox(tmp_path / "good")
++    utils = FakeUtils(selections=[str(bad), str(good)])
++    assert _resolve_mailbox(utils, None) == good.resolve()
++    assert len(utils.messages) == 1
++    assert utils.messages[0][2] is True
+diff --git a/apworld/tome/docs/setup_en.md b/apworld/tome/docs/setup_en.md
+--- a/apworld/tome/docs/setup_en.md
++++ b/apworld/tome/docs/setup_en.md
+@@ -25,5 +25,11 @@
+ `C:\Users\you\T-Engine\4.0\tome\archipelago`
+ 
+-The client remembers that directory for later launches. WebHost `archipelago://` links are supported.
++Launch ToME with the matching addon at least once before selecting the directory.
++The addon writes `mailbox-info.json` into the real mailbox, and the client
++refuses directories that do not contain a valid marker. A stale remembered
++mailbox is discarded and the directory picker is shown again.
++
++The client remembers a validated directory for later launches. WebHost
++`archipelago://` links are supported.
+ 
+ Start ToME and create an **Archipelago Adventurer**. The addon and bridge reject mismatched seed/slot contracts.
+diff --git a/docs/INSTALL.md b/docs/INSTALL.md
+--- a/docs/INSTALL.md
++++ b/docs/INSTALL.md
+@@ -64,4 +64,9 @@
+ that actually contains the export as the **mailbox directory**. Do not point
+ the bridge at an unrelated directory and assume the engine can see it.
+ 
++The addon also writes `mailbox-info.json` into this directory. The Archipelago
++client uses that marker to verify mailbox ownership before reading or writing
++bridge snapshots. Invalid explicit paths are rejected; invalid cached paths
++cause the client to prompt again instead of silently creating a new directory.
++
+ If the file does not appear, inspect `te4_log.txt` and the addon load errors.

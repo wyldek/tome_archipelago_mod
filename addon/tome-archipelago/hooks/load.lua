@@ -3,6 +3,10 @@ local Birther = require "engine.Birther"
 print("[Archipelago] hooks/load.lua loaded")
 class:bindHook("ToME:load", function(self, data)
   local AP = require "mod.class.Archipelago"
+  local marked, marker_err = pcall(AP.ensureMailboxMarker)
+  if not marked then
+    print("[Archipelago] Mailbox marker write failed: "..tostring(marker_err))
+  end
   local ok, err = pcall(function()
     Birther:loadDefinition("/data-archipelago/birth.lua")
   end)

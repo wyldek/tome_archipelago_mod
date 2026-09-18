@@ -38,6 +38,14 @@ end
 M.read=read
 M.write=write
 
+function M.ensureMailboxMarker()
+  write("mailbox-info.json",{
+    schema=1,
+    game="Tales of Maj'Eyal",
+    addon="tome-archipelago",
+  })
+end
+
 function M.isCharacter(actor)
   if game and game.player and actor~=game.player then return false end
   return actor and (actor.archipelago_character or
