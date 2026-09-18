@@ -205,9 +205,7 @@ project:
 python ToMEClient.py --help
 ```
 
-Pass `--ap-root`, `--mailbox`, the exact slot name, and the server connection
-using the flags shown by that command. The client uses the AP base parser
-for standard connection/password options. Do not store a password in Lua,
+Pass `--mailbox`, the exact slot name, and the server connection using the flags shown by that command. `--ap-root` is now optional and only needed to override automatic Archipelago source-root detection. On the standard Windows install, the fallback delegates to the installed Tales of Maj'Eyal Launcher client. The client uses the AP base parser for standard connection/password options. Do not store a password in Lua,
 slot data or the mailbox.
 
 Stop the local demo before starting the bridge. Start or reload an AP

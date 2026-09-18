@@ -12,6 +12,7 @@ from CommonClient import (
     CommonContext,
     ClientCommandProcessor,
     get_base_parser,
+    gui_enabled,
     handle_url_arg,
     server_loop,
 )
@@ -73,12 +74,19 @@ def _resolve_mailbox(value: str | None) -> Path:
     if cached:
         return Path(cached).expanduser().resolve()
 
-    print("Tales of Maj'Eyal Archipelago needs the addon mailbox directory.")
-    print(r"Example: C:\Users\you\T-Engine\4.0\tome\archipelago")
-    entered = input("Mailbox directory: ").strip().strip('"')
-    if not entered:
-        raise SystemExit("A mailbox directory is required.")
-    path = Path(entered).expanduser().resolve()
+    # Launcher components using a custom func run in a spawned process without a
+    # usable terminal. Use AP's native directory picker rather than input(), so
+    # first launch works from ArchipelagoLauncher.exe as well as from a shell.
+    selected = Utils.open_directory(
+        "Select Tales of Maj'Eyal Archipelago mailbox directory",
+        str(Path.home()),
+    )
+    if not selected:
+        raise SystemExit(
+            "A ToME Archipelago mailbox directory is required. "
+            "Launch ToME once with the addon installed, then select its tome/archipelago directory."
+        )
+    path = Path(selected).expanduser().resolve()
     Utils.persistent_store(PERSIST_CATEGORY, PERSIST_MAILBOX_KEY, str(path))
     return path
 
@@ -238,6 +246,8 @@ async def _run(args) -> None:
     ctx.mailbox.mkdir(parents=True, exist_ok=True)
     with exclusive_bridge(ctx.mailbox / "bridge.lock"):
         ctx.server_task = asyncio.create_task(server_loop(ctx), name="AP server")
+        if gui_enabled:
+            ctx.run_gui()
         ctx.run_cli()
         task = asyncio.create_task(_watcher(ctx), name="ToME mailbox")
         try:

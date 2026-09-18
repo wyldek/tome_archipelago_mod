@@ -20,7 +20,7 @@ Create a normal Archipelago YAML for `Tales of Maj'Eyal` and generate the multiw
 
 ## Connect
 
-Launch **Tales of Maj'Eyal Client** from Archipelago. The first launch asks for the ToME mailbox directory, for example:
+Launch **Tales of Maj'Eyal Client** from Archipelago. The first launch opens a directory picker for the ToME mailbox directory, for example:
 
 `C:\Users\you\T-Engine\4.0\tome\archipelago`
 
@@ -34,8 +34,10 @@ Paid shop checks scout their locations from the server before display. The merch
 
 ## Standalone client fallback
 
-The separate client bundle can be run from a Python 3.11.9-3.13 environment against an Archipelago 0.6.7 source checkout:
+The separate client bundle no longer requires `--ap-root`. It first tries an importable/source Archipelago 0.6.7 install, then the standard Windows install (`C:\ProgramData\Archipelago`) and delegates to the installed Launcher client. `--ap-root` remains an optional override for unusual source-checkout locations.
 
-`python ToMEClient.py --ap-root C:\path\to\Archipelago --mailbox C:\path\to\T-Engine\4.0\tome\archipelago --connect host:port --name SlotName`
+Typical direct-source use:
+
+`python ToMEClient.py --mailbox C:\path\to\T-Engine\4.0\tome\archipelago --connect host:port --name SlotName`
 
 Use `/tome` for current bridge status and `/resync` to resend Sync and pending checks.

@@ -118,9 +118,12 @@ options:
 
 ## `ToMEClient.py`
 
+The fallback client auto-detects an Archipelago source checkout when possible and delegates to the installed Archipelago Launcher client on the normal Windows installation. `--ap-root` is an optional override, not a requirement. `--mailbox` is also optional after first use because the selected directory is persisted by Archipelago.
+
+Typical use:
+
 ```text
-usage: ToMEClient.py --ap-root AP_ROOT --mailbox MAILBOX [--name NAME]
-ToMEClient.py: error: the following arguments are required: --ap-root, --mailbox
+python ToMEClient.py --mailbox C:\path\to\T-Engine\4.0\tome\archipelago --connect host:port --name SlotName
 ```
 
 ## Windows offline helper
