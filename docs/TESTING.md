@@ -1,88 +1,89 @@
-# Testing and release gates
+\
+# Testing and qualification
 
-## What automated tests can establish
+## Automated tests
 
-The standalone tests can check deterministic selection, actual cap-based
-budgets, stable IDs, location allocation, receipt index semantics, duplicate
-copies, wrong-slot rejection, and JSON validation. Lupa tests execute Lua
-against a deliberately small fake engine. They can detect algorithmic errors
-in that environment; they cannot certify real ToME method signatures,
-callback ordering, object serialization or talent side effects.
-
-Run:
+Run from the repository root:
 
 ```powershell
 python -m pytest -q -rs
 python -m compileall -q tome_ap apworld tools tests ToMEClient.py
 ```
 
-Install Lupa to execute the Lua tests instead of skipping them. The pytest suite is the supported standalone runner because the Lua test module uses `pytest.importorskip()` when Lupa is unavailable. The APWorld
-has its own optional WorldTestBase tests, to run after staging a real
-catalog into the pinned Archipelago source checkout.
+The Python suite checks deterministic generation, cap-based budgets, stable IDs, option combinations, location allocation, receipt ordering, duplicate copies, wrong-slot rejection, JSON/mailbox validation, and static addon behavior.
 
-## Required native-engine smoke test
+`tests/test_lua.py` uses Lupa to execute the real Lua addon against a deliberately small fake engine. It is skipped when Lupa is unavailable. Fake-engine execution can find algorithmic errors but cannot certify native T-Engine callback ordering, serialization, or talent side effects.
 
-- Addon loads without a Lua traceback; runtime-export.json is produced.
-- A real catalog compiles, and a seed with configured counts generates.
-- The AP subclass becomes selectable only with a valid configuration.
-- Character has the expected selected trees and no unintended paid trees.
-- A first talent rank works, another copy raises it, and overflow is safe.
-- +5 packages change the intended raw stat and stop at the declared cap.
-- Each allowed prodigy can be granted and actually used/triggered safely.
-- Native level-up does not award discretionary advancement currency.
-- Non-AP actors and ordinary characters retain native behavior.
-- Normal inventory constraints remain; the AP eligibility bypass is scoped.
-- Mailbox polling works while awaiting input, without corrupting dialogs.
-- Native campaign victory is detected using the correct saved flag/event.
+The APWorld also contains optional `WorldTestBase` tests to run after staging a real compiled catalog into the pinned Archipelago 0.6.7 source checkout.
 
-## Persistence matrix
+## Required release smoke test
 
-Test at least these boundaries with actual game and bridge processes:
+Before publishing a release artifact:
+
+- Build/install the current `.teaa`.
+- Launch ToME and verify `...\tome\archipelago\mailbox-info.json` reports schema 2 and `/archipelago`.
+- Verify a fresh schema-2 `runtime-export.json` is produced.
+- Compile/package the APWorld from that export.
+- Connect the launcher client to a generated slot and confirm `/tome` shows the correct mailbox and a seed/team/slot binding.
+- Create an Archipelago Adventurer and verify the configured categories and precollected ranks.
+- Reach a level with advancement checks and verify `game.json` records them.
+- Disconnect the AP client, trigger another check, reconnect, and verify the pending check is sent once.
+- Verify at least one post-start received ToME item applies once and survives save/reload.
+
+## Native-engine behavior matrix
 
 | Scenario | Expected result |
 |---|---|
-| Bridge reconnects with full history | No duplicate grant |
-| Same item ID occurs five times | Five ranks up to the actual cap |
-| Game receives no new input/turns | Items still become observable at the supported safe poll point |
-| Save immediately before receiving an item, then reload | Correct replay from that save's prefix |
-| Kill game after mutation but before normal save | Recovery follows the saved cursor/mutation state |
-| Restore an older save after checks were sent | No second item for a previously checked location |
-| Complete a check offline | It is submitted on reconnect |
-| Server provides unexpected receipt gap | Sync/recovery, not arbitrary skip |
-| A grant raises after a native side effect | Stop processing and require consistent recovery |
-| Wrong seed/slot contract is present | No grants and no check submission |
-| Two bridge processes use one mailbox | Second process is rejected |
-| Admin sends an overflow item | Safe cap handling and receipt consumed |
-| Unknown item ID arrives | Explicit incompatibility, not silent filler |
-| Character dies during receipt arrival | No accidental grant to a dead actor/clone |
+| Same item ID occurs multiple times | Each receipt advances the ordered prefix; talent ranks stop at the native exported cap. |
+| Client reconnects with full history | Previously applied prefix is not granted again. |
+| Client is disconnected when a check occurs | `game.json` retains the local check; reconnect sends the unsent check. |
+| Restore older save | Receipts after the saved applied prefix can replay from server history; server-checked locations remain idempotent. |
+| Wrong seed/team/slot/contract | No cross-seed grants/check submission. |
+| Two bridge processes use one mailbox | Second process fails the exclusive lock. |
+| Unknown item ID arrives | Explicit sync incompatibility; do not silently convert it to filler. |
+| Native talent grant throws | Stop further grants and surface the error. |
+| Character dies during delivery | Do not accidentally grant to a dead actor/clone. |
+| Admin/overflow copy arrives | Receipt is consumed safely; rank does not exceed the exported cap. |
 
-## Multiworld acceptance test
+## Location qualification
 
-Use a small private two-player seed. Place/send a known foreign progression
-item through a ToME location, and a known ToME rank through the other game.
-Verify exact recipient, location, receipt order, save persistence, and offline
-reconnection. Repeat with two ToME slots using distinct mailboxes.
+### Bosses
+
+For each configured boss, verify the AP check is recorded **after** the normal death path and that native XP/loot/artifacts/quest state are unchanged.
+
+### Zones
+
+Verify each `— Explored` location triggers on first entry to the configured zone rather than requiring map completion.
+
+### Quests
+
+Verify each native quest status/sub-state maps to exactly one AP location and survives save/reload.
+
+### Shops
+
+For each town tier, verify:
+
+- the configured 1/2/3 parcels per merchant;
+- the displayed item and recipient match LocationScout data;
+- viewing the store does not create an AP hint (`create_as_hint: 0`);
+- exact gold deduction;
+- one-time check behavior;
+- no ordinary inventory transfer for the parcel;
+- progression items from any world are rejected by placement rules.
+
+### Victory
+
+Verify native Age of Ascendancy victory checks the victory location, reports `CLIENT_GOAL`, and only auto-checks remaining advancement locations—not unfinished boss/zone/quest/shop checks.
+
+## Shared-multiworld acceptance
+
+Use a private multiworld with at least one other game. Verify both directions:
+
+1. A ToME location contains another player's meaningful item and checking it delivers correctly.
+2. Another game contains a ToME talent/stat/prodigy item and receiving it mutates the ToME character exactly once.
+
+Repeat at least one check/item while the ToME bridge is disconnected and confirm normal catch-up after reconnect.
 
 ## Full-campaign qualification
 
-Complete multiple real campaigns with the supported content profile and
-record: build selection, tree counts, starter items, difficulty/race,
-resource availability, native check detection, item pacing, all prodigy
-behavior, online isolation, and goal handling. Play at minimum and maximum
-supported counts, not only the 6/4 default.
-
-A passing generation test or a large number of simulated seeds is not a
-substitute for these campaigns. Readiness thresholds do not prove combat
-solvability.
-
-## Feature-completion gates from the workplan
-
-Before claiming the complete workplan is implemented:
-
-1. Audit and implement the intended boss/story/zone location manifest.
-2. Qualify every resource family and installed-DLC tree set exported by the full runtime catalog.
-3. Replace broad offline isolation with verified native content interception,
-   or document broad offline mode as the final supported choice.
-4. Audit native quest/birth/prodigy/inscription advancement exceptions.
-5. Validate actual addon/APWorld packaging in clean installations.
-6. Publish the exact compatibility matrix and known failure cases.
+A generated seed passing unit tests is not proof that its random build can beat ToME. Record full-campaign runs with different races/difficulties/tree counts and especially unusual resource/prodigy/support-tree combinations. `readiness` remains a heuristic, not a solver.

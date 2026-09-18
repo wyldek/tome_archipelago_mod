@@ -1,240 +1,213 @@
-# Installation and development workflow
+\
+# Installation and source-build workflow
 
-These steps target a **Windows development setup**, ToME **1.7.6**, and an
-Archipelago **0.6.7** source checkout. These are project targets, not a claim
-that they are the latest releases. Use the same Python interpreter for the
-bridge and the AP development checkout.
+This document targets **Tales of Maj'Eyal 1.7.6** and **Archipelago 0.6.7**.
 
-Use a separate ToME copy/profile and back up saves. The beta is not a
-finished one-click integration.
+## 1. Using the release artifacts
 
-## 1. Set up Python and inspect the package
+### Install the APWorld
 
-Install a Python version supported by the pinned Archipelago checkout.
-Its source instructions specify Python 3.11.9 or newer and below 3.14.
-A Python 3.12 virtual environment is a reasonable target.
+Install `tome.apworld` through Archipelago Launcher's **Install APWorld** component, then restart the Launcher. It registers **Tales of Maj'Eyal** for generation and adds the **Tales of Maj'Eyal Client** launcher component.
+
+### Install the ToME addon
+
+Put the matching `tome-archipelago.teaa` in ToME's `game/addons` directory and restart ToME. Do not mix an addon and APWorld from different integration releases.
+
+### Initialize the mailbox
+
+Start ToME once with the addon enabled before launching the AP client. The addon uses the T-Engine virtual directory:
+
+```text
+/archipelago
+```
+
+On a normal Windows user profile this resolves to:
+
+```text
+C:\Users\<you>\T-Engine\4.0\tome\archipelago
+```
+
+The addon writes at least:
+
+```text
+mailbox-info.json      schema-2 marker identifying /archipelago
+runtime-export.json    runtime talent/category metadata from this ToME install
+```
+
+The old development path `...\tome\tome\archipelago` is not the 1.0 mailbox.
+
+### Connect the Archipelago client
+
+Launch **Tales of Maj'Eyal Client** from Archipelago. On first launch it opens a directory picker. Select the exact physical directory containing `mailbox-info.json` and `runtime-export.json`.
+
+The bridge validates the marker before accepting or caching the path. If an old cached path is no longer valid, it prompts again instead of creating a new directory.
+
+Connect to the server and enter the slot name if prompted. `/tome` displays the current mailbox, seed/team/slot binding, and the last bridge error. `/resync` requests a server Sync and resends the bridge's pending checks.
+
+### Start the AP character
+
+With the bridge connected to a generated ToME slot, start ToME and create an **Archipelago Adventurer**. The addon rejects a save whose seed/team/slot/contract identity does not match the current client snapshot.
+
+## 2. Expected mailbox files
+
+During normal play the mailbox should look roughly like this:
+
+| File | Writer | Purpose |
+|---|---|---|
+| `mailbox-info.json` | ToME addon | Marker proving this is the current `/archipelago` mailbox. |
+| `runtime-export.json` | ToME addon | Schema-2 installed-content catalog source used for builds. |
+| `client.json` | Python bridge | Contract, authoritative ordered receipts, server-confirmed checks, shop scout data. |
+| `game.json` | ToME addon | Applied receipt count, locally completed checks, goal, game-side error state. |
+| `bridge-state.json` | Python bridge | Persists locally observed checks waiting for/reflecting server acknowledgement. |
+| `bridge.lock` | Python bridge | Prevents two bridge processes from owning one mailbox simultaneously. |
+
+If `game.json` exists and contains checks while `client.json` says `connected: false`, the game side is still recording progress; reconnecting the client should flush pending checks to the server.
+
+## 3. Supported Python for source/development use
+
+Archipelago 0.6.7's pinned source environment supports Python 3.11.9 through 3.13. Python 3.14 is not supported by that Archipelago release.
+
+A typical project environment is:
 
 ```powershell
-cd C:\dev\tome_archipelago_source
+cd C:\dev\tome_archipelago_mod
 py -3.12 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
+python -m pip install "pytest>=8,<9"
+```
+
+Install `lupa` only if you want the optional fake-engine Lua tests:
+
+```powershell
 python -m pip install lupa
-python -m unittest discover -s tests -t . -v
 ```
 
-Lupa is used only for executing fake-engine Lua tests; it is not a library
-to install into ToME. See the included validation report and do not silently
-ignore failed tests. Lua tests may be skipped when Lupa is unavailable.
-
-## 2. Install the development addon
-
-Either install the provided `tome-archipelago.teaa` into the game's
-`game/addons` directory, or use the source-install helper. **Do not install
-both the packed and unpacked form at the same time.**
+## 4. Run the standalone tests
 
 ```powershell
-python tools/install_addon.py --help
+python -m pytest -q -rs
+python -m compileall -q tome_ap apworld tools tests ToMEClient.py
 ```
 
-Give the helper the actual game directory shown by Steam's Browse Local
-Files command. Its help output is reproduced in TOOL_REFERENCE.md. The
-helper intentionally refuses accidental overwrites/coexisting addon copies.
+The Lua test module is skipped when Lupa is unavailable. These tests validate code-level invariants but do not replace real T-Engine or multiworld testing.
 
-Enable the addon in ToME. Use a fresh disposable character for subsequent
-tests. During source debugging, developer mode can change online/save
-behavior; do not use an existing valuable save as a test subject.
+## 5. Build the `.teaa` from source
 
-## 3. Export the actual talent catalog
-
-The addon's load hook exports talent metadata from the installed engine.
-The AP subclass can remain unavailable until a valid seed configuration is
-present; that does not prevent catalog export.
-
-Look for `runtime-export.json` under the ToME user-data tree. The addon uses
-the virtual directory `/tome/archipelago`; its physical location depends on
-the engine's writable user-data root. A common Windows search is:
-
-```powershell
-Get-ChildItem "$env:USERPROFILE\T-Engine" -Recurse `
-  -Filter runtime-export.json -ErrorAction SilentlyContinue |
-  Select-Object -ExpandProperty FullName
-```
-
-This search is a way to discover the file, not a claim that the directory
-must be in that exact location on every installation. Use the directory
-that actually contains the export as the **mailbox directory**. Do not point
-the bridge at an unrelated directory and assume the engine can see it.
-
-If the file does not appear, inspect `te4_log.txt` and the addon load errors.
-Do not proceed by generating fake talent IDs. Use `tools/audit_install.py`
-to collect the relevant installed-source API evidence.
-
-## 4. Isolate ToME's online content
-
-The Python bridge must be able to reach Archipelago; the game executable
-must not receive live ToME event/vault content during these tests.
-
-Inspect the offline helper before running it:
-
-```powershell
-Get-Help .\tools\windows_offline.ps1 -Full
-Get-Content .\tools\windows_offline.ps1
-```
-
-Run its block operation from an elevated PowerShell, passing the exact
-ToME executable and mailbox directory using the parameters declared in the
-script. It writes an offline-policy acknowledgement and can remove its own
-firewall rule later. It does not need to block Python.
-
-On other platforms, apply your own process/network isolation and then use
-`tools/confirm_manual_offline.py --help` for an explicit acknowledgement.
-That helper does **not** implement a firewall. Also disable online events in
-ToME and avoid existing/cached online-event saves.
-
-## 5. Compile and validate the catalog
-
-```powershell
-python tools/compile_catalog.py --help
-```
-
-Provide the real runtime export and the supplied
-`profiles/wanderer-full.json` full player-tree policy profile. The tool resolves
-actual talent symbols, caps, class/generic classification and prodigies.
-Missing profile entries are reported. Insufficient eligible content for a
-requested tree count is an error; it must not silently replace missing
-content or reinterpret stable item IDs.
-
-The full profile takes player-facing class/generic categories from the runtime export, always includes Combat Training, and adds reviewed prodigy-granted categories. The release catalog reflects the DLC/content installed in the export used to build it; use the same supported content set when testing the packaged world.
-
-## 6. Run the local demo before a server
-
-```powershell
-python tools/local_demo.py --help
-```
-
-Supply the compiled catalog and actual mailbox directory using the tool's
-arguments. The demo writes a seed-bound client configuration and serves a
-local single-player item queue based on observed game checks. It is not an
-Archipelago server and must not be run alongside the real bridge in the
-same mailbox.
-
-After the configuration is present, reopen character creation and select
-**Archipelago Adventurer**. Validate the selected trees and starter grants,
-reach level 2, and verify that the generated advancement locations are checked and cause corresponding receipts. The beta also includes additive boss and campaign milestone checks; those observe native accomplishments and do not replace ToME loot. Save/reload and test duplicate
-receipt handling.
-
-Use a new test save when changing demo seeds. Do not reuse a live server
-character in the demo. Consult the demo's help for reset/grant-all testing
-options; they are debugging operations.
-
-## 7. Set up the pinned Archipelago checkout
-
-```powershell
-cd C:\dev
-git clone --branch 0.6.7 --depth 1 https://github.com/ArchipelagoMW/Archipelago.git
-cd Archipelago
-C:\dev\tome_archipelago_source\.venv\Scripts\python.exe ModuleUpdate.py
-```
-
-Follow any dependency prompts. The project's ToME bridge imports this
-checkout's CommonClient and related modules; do not install a random PyPI
-package named Archipelago as a replacement.
-
-## 8. Build and stage the APWorld
-
-Return to the project directory and inspect:
-
-```powershell
-python tools/build.py --help
-```
-
-The build requires `--export` pointing to the real runtime catalog export.
-Pass `--ap-root` for the pinned Archipelago source checkout. Add
-`--package-apworld` to invoke Archipelago's official Build APWorlds component.
-Use the tool's current help for any optional profile/output arguments.
-
-The build stages the `tome` world, generated catalog and shared core under
-`dist/worlds/tome`, then optionally installs that stage into the AP checkout.
-It intentionally refuses an unrequested overwrite of an existing world.
-The upstream packaging step supplies APContainer metadata rather than
-manually fabricating the manifest's packaging version fields.
-
-A source-only addon package can also be made independently:
+The addon archive does not need a runtime export:
 
 ```powershell
 python tools/build.py --addon-only
 ```
 
-## 9. Generate a private test seed
+Output:
 
-In the Archipelago checkout, generate template options through Launcher.py
-or start with the project's `examples/wyldek.yaml`. Use a fresh Players folder
-containing only the intended test player files. The minimal settings are:
+```text
+dist\tome-archipelago.teaa
+```
+
+For a release build, install that current addon in ToME and launch the game once before building the APWorld. This refreshes `runtime-export.json` using the exact addon source being released.
+
+## 6. Generate the current schema-2 runtime export
+
+The addon's load hook exports metadata from the installed ToME talent registry. Confirm that this file exists after launching ToME:
+
+```text
+C:\Users\<you>\T-Engine\4.0\tome\archipelago\runtime-export.json
+```
+
+It must contain `"schema": 2`. Schema-1 exports are intentionally rejected by the full catalog compiler.
+
+The export reflects the content and DLC installed in that ToME installation. A release APWorld therefore represents the installed content set used to build it. Regenerate the export whenever the addon or installed ToME content changes before making a release artifact.
+
+## 7. Set up the pinned Archipelago checkout
+
+A packaged `.apworld` build uses Archipelago's own `Build APWorlds` component, so use an Archipelago 0.6.7 source checkout:
+
+```powershell
+cd C:\dev
+git clone --branch 0.6.7 --depth 1 https://github.com/ArchipelagoMW/Archipelago.git
+cd Archipelago
+C:\dev\tome_archipelago_mod\.venv\Scripts\python.exe ModuleUpdate.py
+```
+
+Do not install an unrelated PyPI package named `Archipelago` as a replacement for the source checkout.
+
+## 8. Build and package the APWorld
+
+Return to the ToME integration repository. Before staging, remove or rename an existing development `worlds\tome` in the AP checkout; the build script intentionally refuses to overwrite it.
+
+```powershell
+cd C:\dev\tome_archipelago_mod
+python tools/build.py `
+  --export "$env:USERPROFILE\T-Engine\4.0\tome\archipelago\runtime-export.json" `
+  --ap-root C:\dev\Archipelago `
+  --package-apworld
+```
+
+Outputs include:
+
+```text
+dist\tome-archipelago.teaa
+dist\catalog.json
+dist\worlds\tome\...       staged AP world
+dist\tome.apworld           official APWorld package
+```
+
+`tools/build.py` compiles the real runtime export, copies the shared generator/core modules into the staged world, writes `data/catalog.json`, installs the development world into the AP source checkout, and invokes Archipelago's official packager.
+
+A synthetic fixture catalog is refused for a release APWorld.
+
+## 9. Generate a multiworld
+
+Generate the template through Archipelago or start with the repository examples. Minimal settings are:
 
 ```yaml
-name: wyldek
-game: Tales of Maj'Eyal
-Tales of Maj'Eyal:
+name: PlayerName
+requires:
+  version: 0.6.7
+game: "Tales of Maj'Eyal"
+
+"Tales of Maj'Eyal":
   class_tree_count: 6
   generic_tree_count: 4
 ```
 
-Then:
+The complete option list is in [CONFIGURATION_REFERENCE.md](CONFIGURATION_REFERENCE.md).
+
+The world intentionally rejects nonempty generic `start_inventory`, `start_inventory_from_pool`, `item_links`, and `exclude_locations` settings because they can violate the seed-bound build contract. Use `starting_ranks` for normal ToME starter ranks.
+
+## 10. Standalone client fallback
+
+The preferred client is the launcher component embedded in `tome.apworld`. `ToMEClient.py` is a fallback for development/source use. It tries an importable/source Archipelago checkout, then the normal Windows Archipelago installation and can delegate to its Launcher client.
+
+Typical source-checkout use:
 
 ```powershell
-python Generate.py
+python ToMEClient.py `
+  --mailbox "$env:USERPROFILE\T-Engine\4.0\tome\archipelago" `
+  --connect host:port `
+  --name SlotName
 ```
 
-Inspect generation errors and the selected-tree/item-count output. Do not
-force generation by deleting failed assertions. The world includes optional
-WorldTestBase tests under `worlds/tome/test` after staging.
+`--ap-root` is optional and only needed to override automatic Archipelago source discovery.
 
-## 10. Start the server and bridge
+## 11. Optional ToME network isolation tools
 
-Host the generated archive using the AP checkout:
+The repository still contains `tools/windows_offline.ps1` and `tools/confirm_manual_offline.py` for developers who deliberately want to isolate ToME's native online services while testing modified addons.
 
-```powershell
-python MultiServer.py "C:\path\to\generated_seed.zip"
-```
+**They are not part of the 1.0 runtime protocol.** The addon does not read `offline-policy.json`, and no offline acknowledgement is required to create or synchronize an AP character. The Python bridge itself must remain online to reach the Archipelago server.
 
-Use the server's actual announced port. In another terminal, from this
-project:
+## 12. Troubleshooting order
 
-```powershell
-python ToMEClient.py --help
-```
+1. Confirm the matching addon and APWorld are installed.
+2. Start ToME and verify `...\tome\archipelago\mailbox-info.json` has schema 2 and `virtual_root: "/archipelago"`.
+3. Verify `runtime-export.json` appears in the same directory.
+4. Launch the AP client and run `/tome`; confirm the mailbox path and a non-`None` seed/team/slot binding after connection.
+5. Verify `client.json` appears and shows the expected contract/identity.
+6. Enter the AP character and verify `game.json` appears.
+7. If checks are present in `game.json` but not on the server, confirm the AP client is currently connected; reconnecting should flush pending checks.
+8. If items stop applying, inspect the in-game `[Archipelago] SYNC STOPPED` message and the `error` fields in the mailbox snapshots before editing any save or receipt state.
+9. Do not hand-edit `applied_count`, the receipt prefix, or contract identity to force recovery.
 
-Pass `--mailbox`, the exact slot name, and the server connection using the flags shown by that command. `--ap-root` is now optional and only needed to override automatic Archipelago source-root detection. On the standard Windows install, the fallback delegates to the installed Tales of Maj'Eyal Launcher client. The client uses the AP base parser for standard connection/password options. Do not store a password in Lua,
-slot data or the mailbox.
-
-Stop the local demo before starting the bridge. Start or reload an AP
-character only after the bridge has published a valid configuration for the
-intended seed and slot. The addon refuses a different identity for an
-existing character.
-
-## 11. Verify a real two-player exchange
-
-A ToME-owned check must be able to contain a foreign player's progression
-item. Complete that check and confirm the other game's client receives it.
-Then send a ToME talent item from that other world and confirm it applies
-exactly once in ToME. Also test an item sent while the game and bridge are
-offline.
-
-This is the point where the architecture has been demonstrated end to end.
-It still does not establish that every generated build can complete the
-campaign or that every native adapter is correct.
-
-## Troubleshooting order
-
-1. Addon load / Lua traceback.
-2. Actual runtime-export file and actual mailbox path.
-3. Offline-policy acknowledgement.
-4. Runtime catalog and supported profile compatibility.
-5. Seed/team/slot/contract identity.
-6. Client connection and receipt history.
-7. Native grant failure or check-detector failure.
-
-Use `python tools/status.py --help` for the mailbox status utility. Preserve
-logs, mailbox snapshots and the affected save when filing a bug. Never
-"repair" a save by incrementing its receipt cursor by hand.
+Use `python tools/status.py --help` for a simple mailbox status view during development.

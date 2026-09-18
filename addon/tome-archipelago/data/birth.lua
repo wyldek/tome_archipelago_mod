@@ -27,7 +27,7 @@ descriptor.name="Archipelago Adventurer"
 descriptor.desc={"A character assembled by an Archipelago seed.",
  "Class and generic categories are selected by the YAML settings.",
  "Talent ranks, specific stats, and specific prodigies arrive through the bridge.",
- "Fresh offline test saves only. Connect the bridge before starting."}
+ "Connect the Archipelago bridge before starting this character."}
 descriptor.locked=function() return AP.config()~=nil end
 descriptor.locked_desc="Connect the ToME Archipelago bridge to a generated slot first."
 descriptor.talents_types=function(birth)

@@ -27,7 +27,7 @@ class ToMEWeb(WebWorld):
     theme = "stone"
     tutorials = [Tutorial(
         "ToME Archipelago Setup",
-        "Install the offline addon and bridge.",
+        "Install the ToME addon and Archipelago bridge.",
         "English", "setup_en.md", "setup/en", ["ToME AP contributors"],
     )]
 

@@ -1,7 +1,7 @@
 {
   "game": "Tales of Maj'Eyal",
   "minimum_ap_version": "0.6.7",
-  "world_version": "0.2.7",
+  "world_version": "1.0.0",
   "authors": [
     "ToME AP contributors"
   ]

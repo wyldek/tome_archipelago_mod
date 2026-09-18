@@ -1,43 +1,41 @@
+\
 # Tales of Maj'Eyal Archipelago Setup
 
 ## Requirements
 
-- Tales of Maj'Eyal 1.7.6 with the matching `tome-archipelago.teaa` addon.
+- Tales of Maj'Eyal 1.7.6.
+- Matching `tome-archipelago.teaa` and `tome.apworld` from the same integration release.
 - Archipelago 0.6.7.
-- For the standalone fallback client only: Python 3.11.9 through 3.13. Python 3.14 is not supported by Archipelago 0.6.7.
+- Python 3.11.9–3.13 only if using the standalone/source fallback client; normal Launcher use does not require a separate Python setup.
 
-## Install the APWorld
+## Install
 
-Install `tome.apworld` through Archipelago Launcher's **Install APWorld** component, then restart the Launcher. The world adds **Tales of Maj'Eyal** to generation and registers a **Tales of Maj'Eyal Client** launcher component.
+Install `tome.apworld` through Archipelago Launcher's **Install APWorld** component and restart the Launcher.
 
-## Install the ToME addon
+Put `tome-archipelago.teaa` in ToME's `game/addons` directory and restart ToME.
 
-Install the matching `tome-archipelago.teaa` into ToME's addon directory and restart ToME. Do not mix an addon and APWorld from different integration versions.
+## Initialize the mailbox
 
-## Generate
-
-Create a normal Archipelago YAML for `Tales of Maj'Eyal` and generate the multiworld. The default 6/4 build uses the configured world checks first and fills the remaining reward budget with dynamic level checks.
-
-## Connect
-
-Launch **Tales of Maj'Eyal Client** from Archipelago. The first launch opens a directory picker for the ToME mailbox directory, for example:
+Start ToME once with the addon enabled. The addon creates its mailbox under virtual root `/archipelago`; on a normal Windows profile this is:
 
 `C:\Users\you\T-Engine\4.0\tome\archipelago`
 
-The client remembers that directory for later launches. WebHost `archipelago://` links are supported.
+That directory should contain `mailbox-info.json` and `runtime-export.json` before the first client launch.
 
-Start ToME and create an **Archipelago Adventurer**. The addon and bridge reject mismatched seed/slot contracts.
+## Connect
 
-## Shop checks
+Launch **Tales of Maj'Eyal Client** from Archipelago. The first launch asks for the mailbox directory. Select the exact `...\tome\archipelago` directory above. The client validates the schema-2 marker and remembers the path.
 
-Paid shop checks scout their locations from the server before display. The merchant shows the exact AP item and recipient before purchase. Shop scouting uses `create_as_hint: 0`, so revealing the store inventory does not create or broadcast hints.
+Connect to the server, enter the slot name if prompted, then start ToME and create an **Archipelago Adventurer**. The addon rejects mismatched seed/team/slot contracts.
 
-## Standalone client fallback
+Use `/tome` to show the active mailbox, binding, and last error. Use `/resync` to request Sync and resend pending checks.
 
-The separate client bundle no longer requires `--ap-root`. It first tries an importable/source Archipelago 0.6.7 install, then the standard Windows install (`C:\ProgramData\Archipelago`) and delegates to the installed Launcher client. `--ap-root` remains an optional override for unusual source-checkout locations.
+## Check/item overview
 
-Typical direct-source use:
+Talent items are named `<Category>: <Talent>` and grant one raw rank. Stat items are named `+5 <Stat>`. Prodigies are named `Prodigy: <Name>`.
 
-`python ToMEClient.py --mailbox C:\path\to\T-Engine\4.0\tome\archipelago --connect host:port --name SlotName`
+Locations include dynamic `Advancement LL — Reward RR` level checks, 16 boss checks, optional zone-entry/quest checks, optional paid merchant parcels, and `Age of Ascendancy — Victory`. Paid parcels display their scouted item/recipient before purchase and cannot contain logical progression from any world.
 
-Use `/tome` for current bridge status and `/resync` to resend Sync and pending checks.
+## Reconnect behavior
+
+ToME can continue recording local checks in `game.json` while the AP client is disconnected. Reconnect the client to flush pending checks and refresh received-item history.

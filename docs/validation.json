@@ -1,13 +1,22 @@
 {
-  "version": "0.2.7-beta",
+  "version": "1.0.0",
   "pytest": {
-    "passed": 101,
+    "passed": 110,
     "skipped": 1,
     "failed": 0,
+    "context": "RC2 source baseline with final mailbox/path changes overlaid",
     "skip_reason": "Optional Lupa package unavailable for Lua execution tests"
   },
-  "local_demo_shop_scouts": "126/126 revealed placement records generated in smoke check",
-  "native_tome_v027": "not_run",
-  "upstream_apworld_tests": "not_run",
-  "two_player_multiworld": "not_run"
+  "compileall": "pass",
+  "real_tome_core_transport": {
+    "mailbox_root": "pass (/archipelago -> .../T-Engine/4.0/tome/archipelago)",
+    "starter_receipts": "pass (2 ranks observed)",
+    "local_level_zone_checks": "pass",
+    "disconnect_accumulation": "pass",
+    "reconnect_flush": "pass"
+  },
+  "full_campaign": "not_qualified",
+  "all_fixed_location_observers": "not_qualified",
+  "broad_shared_multiworld": "not_qualified",
+  "upstream_apworld_tests": "not_run_in_this_environment"
 }

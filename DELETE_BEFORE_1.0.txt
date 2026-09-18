@@ -1,0 +1,4 @@
+Delete this obsolete development patch before tagging:
+tome_mailbox_validation_fixed.patch
+
+Also replace or remove release/tome-archipelago.teaa if it is still the old 0.2.7 build.

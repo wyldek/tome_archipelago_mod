@@ -75,8 +75,8 @@ function actor:learnTalentType(tree,known)self.talents_types[tree]=known end
 function actor:incStat(id,n)self.stats[id]=self.stats[id]+n end
 function actor:unlearnTalent(id)self.raw[id]=math.max(0,(self.raw[id] or 0)-1)end
 game={player=actor,level={},log=function(...)end}
-fs.files["/tome/archipelago/client.json"]=JSON.encode(snapshot)
-fs.files["/tome/archipelago/offline-policy.json"]='{"schema":1,"confirmed":true,"mode":"test"}'
+fs.files["/archipelago/client.json"]=JSON.encode(snapshot)
+fs.files["/archipelago/offline-policy.json"]='{"schema":1,"confirmed":true,"mode":"test"}'
 function poll() for i=1,20 do AP.poll(game) end end
 ''')
     return vm,codec,ap,catalog,build,primary
@@ -100,12 +100,12 @@ def test_lua_level_jump_and_victory():
     vm,codec,ap,c,b,item=engine()
     vm.globals().poll()
     vm.execute("actor.level=7; poll()")
-    out=json.loads(vm.globals().fs.files["/tome/archipelago/game.json"])
+    out=json.loads(vm.globals().fs.files["/archipelago/game.json"])
     expected={loc.code for loc in b.locations if loc.event=="level" and loc.level<=7}
     assert set(out["checks"])==expected and not out["goal"]
     assert 790000 not in out["checks"]
     vm.execute('actor.winner="full"; poll()')
-    out=json.loads(vm.globals().fs.files["/tome/archipelago/game.json"])
+    out=json.loads(vm.globals().fs.files["/archipelago/game.json"])
     expected_after_victory={loc.code for loc in b.locations if loc.event in {"level","victory"}}
     assert out["goal"] and set(out["checks"])==expected_after_victory
 
@@ -113,13 +113,13 @@ def test_lua_prefix_change_refused():
     vm,codec,ap,c,b,item=engine()
     vm.globals().poll()
     vm.globals().other_id=c.items["stat:str"].code
-    vm.execute('snapshot.receipts[1].item=other_id; fs.files["/tome/archipelago/client.json"]=JSON.encode(snapshot); poll()')
+    vm.execute('snapshot.receipts[1].item=other_id; fs.files["/archipelago/client.json"]=JSON.encode(snapshot); poll()')
     assert "prefix changed" in ap.last_error
     assert vm.globals().actor.stats[1]==10
 
 def test_lua_unknown_receipt_stops():
     vm,codec,ap,c,b,item=engine()
-    vm.execute('snapshot.receipts[1].item=1; fs.files["/tome/archipelago/client.json"]=JSON.encode(snapshot); poll()')
+    vm.execute('snapshot.receipts[1].item=1; fs.files["/archipelago/client.json"]=JSON.encode(snapshot); poll()')
     assert vm.globals().actor.archipelago_state.applied_count==0
     assert "Unknown" in ap.last_error
 
@@ -141,7 +141,7 @@ def test_lua_dead_character_not_granted():
 def test_lua_different_slot_refused():
     vm,codec,ap,c,b,item=engine()
     vm.globals().poll()
-    vm.execute('snapshot.identity.slot=2; fs.files["/tome/archipelago/client.json"]=JSON.encode(snapshot); poll()')
+    vm.execute('snapshot.identity.slot=2; fs.files["/archipelago/client.json"]=JSON.encode(snapshot); poll()')
     assert "different AP" in ap.last_error
 
 def test_lua_nonplayer_clone_ignored():

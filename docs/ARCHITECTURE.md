@@ -1,103 +1,100 @@
-# Architecture, ownership and recovery
+\
+# Architecture, mailbox ownership, and recovery
 
 ## Component ownership
 
-**APWorld:** selects the seed's immutable character build, creates the exact
-item/location multisets, defines the logic mode, and returns the contract
-through slot data. It must not inspect a running local ToME save during
-multiworld generation.
+**APWorld** selects the seed's immutable character build, constructs exact item/location multisets, applies placement rules, and returns the contract through slot data. Generation never depends on a running local ToME save.
 
-**Python bridge:** handles the AP connection, full received-item history,
-server check acknowledgements, identity validation, and atomic snapshots.
-It does not emulate ToME's talent callbacks or decide which talent a reward
-means after generation.
+**Python bridge** owns the Archipelago network connection, authoritative received-item history, server-confirmed check state, shop scouting, mailbox validation, identity validation, and bridge snapshots.
 
-**Lua addon:** reads the contract, initializes the AP character, applies game
-mutations, records the receipt prefix/cursor in that same character's save,
-and detects gameplay accomplishments.
+**Lua addon** owns the in-game AP character, applies received upgrades, records the applied receipt prefix in the character save, detects gameplay accomplishments, and publishes local check state.
 
-## Mailbox
+## Mailbox location
 
-The integration uses JSON data, not executable Lua or Python written by the
-server. The actual schemas and field names are defined in `model.py`,
-`mailbox.py`, `client.py` and `Archipelago.lua`. Use those code definitions as
-the authority when extending the protocol.
+The addon uses the T-Engine virtual root:
 
-The client snapshot contains identity, immutable contract, complete ordered
-receipts and server-confirmed checks. The game snapshot reports identity,
-applied receipt count, locally completed checks, goal and diagnostic state.
-Use atomic replacement for Python-written snapshots; readers reject
-truncated, malformed or incompatible input rather than treating it as an
-empty inventory.
+```text
+/archipelago
+```
 
-Only one bridge or demo process may own a mailbox at a time. A filesystem
-lock is provided. The mailbox belongs to one active slot; do not share it
-between unrelated characters or clients.
+On the normal Windows ToME profile this is commonly:
+
+```text
+C:\Users\<you>\T-Engine\4.0\tome\archipelago
+```
+
+The old development root `/tome/archipelago` produced an unintended physical `...\tome\tome\archipelago` path and is no longer used.
+
+## Mailbox files
+
+| File | Writer | Meaning |
+|---|---|---|
+| `mailbox-info.json` | Lua addon | Schema-2 marker containing game/addon identity and `virtual_root: "/archipelago"`. |
+| `runtime-export.json` | Lua addon | Schema-2 runtime catalog source from the installed ToME talent registry. |
+| `client.json` | Python bridge | Seed identity, immutable contract, complete ordered receipts, server-confirmed checks, connection flag, shop scout metadata. |
+| `game.json` | Lua addon | Seed identity, applied receipt count, local check set, goal, revision, game-side error. |
+| `bridge-state.json` | Python bridge | Pending/local checks persisted across bridge restarts for the bound identity. |
+| `bridge.lock` | Python bridge | Exclusive ownership lock for the mailbox. |
+
+The bridge validates `mailbox-info.json` before using a directory. A stale cached directory is rejected and the picker is shown again. The bridge does not create arbitrary selected directories on the user's behalf.
+
+Only one bridge/demo process may own a mailbox at a time. Do not share one mailbox between unrelated concurrent slots.
+
+## Snapshot direction
+
+```text
+Archipelago server
+       ↕
+Python bridge
+       ↓ client.json
+       ↑ game.json
+ToME addon
+```
+
+The addon can continue writing `game.json` while the network client is disconnected. Once reconnected, the bridge merges the local check set into its pending set, compares it with server-confirmed `checked_locations`, and sends the unsent remainder.
 
 ## Identity
 
-A run is bound to seed name, team, slot and contract hash. A character saved
-for seed A may not submit its checks into seed B even when both slots have
-the same display name. Item/location IDs and contract hashes are stable
-content identifiers, not an authentication mechanism against a malicious
-local user.
+A run is bound to seed name, team, slot, and contract hash. A save for seed A must not submit checks into seed B even if the visible slot names are identical.
 
-Passwords remain in the AP client/network flow and are not copied into game
-files. The local filesystem is treated as trusted user-controlled storage;
-this is not a hardened remote administration service.
+The contract hash covers the generated build/settings/content contract. The local mailbox path and bridge implementation are transport details and are not part of that hash; transport fixes can therefore remain compatible with an already-generated seed when the catalog and contract are unchanged.
+
+Passwords stay in the AP client/network flow and are not copied into game snapshots.
 
 ## Receipts
 
-The authoritative history is an ordered list. Item IDs can repeat by design:
+The authoritative received history is ordered and item IDs may repeat:
 
 ```text
-index 0: Flame
+index 0: Temporal Guardian: Warden's Focus
 index 1: +5 Magic
-index 2: Flame
+index 2: Temporal Guardian: Warden's Focus
 ```
 
-The addon stores how much of that ordered prefix it has applied and the
-applied IDs. It must not deduplicate by item ID or assume every item has a
-normal positive source location. Starting inventory/admin commands can have
-special provenance.
+The addon stores the length and IDs of the prefix it has successfully applied. It does not deduplicate by item ID. Starting inventory/admin deliveries can use special source-location values and remain valid receipts.
 
-A full-history resync does not regrant the already-applied prefix. A gap,
-shortened authoritative history or changed applied prefix is a recovery
-condition, not permission to skip arbitrary entries. The bridge's
-ReceivedItems handling must follow the AP index/reset semantics.
+A full-history reconnect does not regrant an already-applied prefix. A shortened authoritative history, changed applied prefix, unknown item, or grant failure is a recovery error; the addon stops rather than skipping arbitrary entries.
 
-## Save and crash behavior
+## Saves and crashes
 
-The character's game mutations and applied prefix are saved together by the
-native character-save mechanism. When an older save is restored, unapplied
-receipts can be replayed from the server history. Locally completed checks
-and server-confirmed checks form an idempotent set; a previously checked
-location cannot be farmed for a second item.
+The applied receipt prefix and game mutations are saved with the character. Restoring an older save can replay receipts after that save's cursor from the authoritative server history. Server-confirmed locations are idempotent and cannot be collected twice.
 
-This design still needs actual process-crash tests to validate ToME's save
-boundaries. It does not claim the engine provides a transactional database
-for arbitrary talent callbacks. If a callback partly mutates the character
-and then errors, the addon stops further grants and reports the failure.
-Restore a known consistent save after fixing the adapter instead of blindly
-retrying a partly applied grant.
+ToME is not a transactional database for arbitrary talent callbacks. If a native callback partly mutates state and then errors, the addon records the error and stops further receipt processing. Recover from a known consistent save after fixing the adapter rather than editing the receipt cursor manually.
 
 ## Restart policy
 
-A new character deliberately bound to the same AP slot can reconstruct
-received upgrades from the same history. Previously checked server locations
-remain checked. This allows recovery without creating another set of checks,
-but it is a gameplay policy that must be documented for group play. Do not
-present it as a normal vanilla permadeath run.
+AP progression belongs to the slot. A newly created character deliberately bound to the same seed/team/slot can reconstruct the same selected categories and replay received upgrades. Its local ToME campaign state starts over normally; already checked AP locations remain checked server-side.
 
 ## Victory
 
-The runtime client reports `CLIENT_GOAL` only after the native campaign goal
-is detected. That network status is separate from the APWorld's abstract
-completion event. The generation code must never read `victory.txt` or a
-mailbox to decide where items can be placed.
+The addon sends `CLIENT_GOAL` only after native Age of Ascendancy victory is observed. The `Age of Ascendancy — Victory` location is also the APWorld completion location. On victory the addon additionally checks any still-unchecked variable advancement locations, but not uncompleted boss/zone/quest/shop locations.
 
-## Extending the integration
+## Runtime catalog and release builds
 
-Player-facing trees are exported dynamically from installed subclass birth descriptors. Adding a new resource family still requires resource initialization, prerequisite/support adapters, forced-learning tests, and an actual-use test. Adding a location requires a stable ID, a native completion predicate, save/load recovery, guaranteed availability or an explicit alternate completion route, and a matching generation rule.
+Player-facing talent categories are exported dynamically from the installed ToME 1.7.6 runtime. `tools/build.py` requires a schema-2 `runtime-export.json` for a release APWorld and rejects old schema-1 or fixture metadata.
 
-Do not bypass errors from the catalog validator. Fail visibly when the seed cannot be represented by the installed content. Prodigy-only trees are cataloged for selected prodigies but are not part of the ordinary random tree roll.
+A release builder should install the current addon, launch ToME to regenerate the export, then build against the pinned Archipelago 0.6.7 source checkout. This keeps the APWorld catalog aligned with the addon and installed content set.
+
+## Optional native-online isolation
+
+The 1.0 runtime has **no offline-policy gate**. Historical/developer tools can still block the ToME executable from native online services during experiments, but `offline-policy.json` is not read by the addon and is not required for synchronization.

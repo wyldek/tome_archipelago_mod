@@ -1,44 +1,56 @@
-# Validation report — v0.2.6 beta source
+\
+# Validation report — 1.0.0 release preparation
 
-This report describes commands run against this source package in the build environment. It does **not** claim a completed native ToME campaign, live T-Engine execution of the new store UI, or a shared multiworld qualification.
+This report records what has actually been exercised for the 1.0 source line. It does **not** claim exhaustive full-campaign or broad shared-multiworld qualification.
 
-## Automated results
+## Automated baseline
+
+Using the RC2 source baseline with the final mailbox/path changes overlaid, the current standalone suite produced:
 
 ```text
-python -m pytest -q -rs
-97 passed, 1 skipped
+110 passed, 1 skipped
 ```
 
-- Python/generation/mailbox/receipt/static-addon tests: **PASS — 97 tests**.
-- Optional Lua execution tests: **SKIPPED** when Lupa is unavailable.
-- Real T-Engine store/quest/zone runtime testing: **NOT RUN here**.
-- Upstream Archipelago `WorldTestBase` against a packaged release world: **NOT RUN here** because a pinned AP checkout is not present in this environment.
+and:
 
-## v0.2.6 checks specifically validated
+```text
+python -m compileall -q tome_ap apworld tools tests ToMEClient.py
+```
 
-- Default 6/4 fixture: 298 shuffled build rewards = 298 locations, with zero Vitality filler copies.
-- Default fixed manifest: 126 paid shop locations, 18 zone checks, 11 quest checks, 16 boss checks, 1 victory check, leaving 126 level checks.
-- Shop modes expose only `off` and `non_progression`; no excluded mode is implemented.
-- One/two/three parcels per store correctly produce 42/84/126 shop locations and level checks absorb the difference.
-- Quest modes `none`, `major`, and `major_and_zone` rebalance level checks exactly.
-- Disabling zone exploration returns all 18 zone slots to the level-check budget.
-- Configurable early-level cutoff and T1/T2 boss priority are reflected in generated location metadata.
-- Sparse level schedules work when a small build has fewer remaining level checks than level milestones.
-- A build whose enabled fixed checks exceed its shuffled reward count fails generation with an explicit configuration error instead of adding filler.
-- The current real compiled catalog smoke calculation produces 317 rewards/checks on the known dependency-heavy seed with zero Vitality filler copies.
+completed successfully.
 
-## Native checks still required
+The one skipped module is the optional Lupa-backed Lua execution suite when Lupa is unavailable. Historical test counts in older 0.2.x notes are not the current release baseline.
 
-1. Run local demo with default v0.2.6 settings and confirm only the configured number of shop parcels appear.
-2. Purchase a parcel and verify exact gold deduction, one-time AP check, no inventory transfer, and no restock duplication.
-3. Generate a real multiworld and verify a progression item cannot be placed in a shop parcel while useful/filler/trap items can.
-4. Verify each configurable zone/quest observer in a real ToME 1.7.6 campaign.
-5. Verify `early_items` from another world can land only in the configured early band and curated T1/T2 checks.
-6. Build/package the APWorld in the pinned Archipelago checkout and run upstream world tests.
+## Real-game transport smoke test
 
-## Important nonclaims
+The final mailbox design was exercised with real ToME 1.7.6 and an Archipelago 0.6.7-hosted seed:
 
-- Passing generator tests does not prove every random build can win ToME.
-- `readiness` logic is a heuristic, not a combat solver.
-- Shop gold affordability is deliberately not AP logic because shop parcels cannot hold progression.
-- Artifact checks are not yet implemented; their random-generation policy still needs design work.
+- the addon wrote to the physical `...\T-Engine\4.0\tome\archipelago` mailbox using virtual root `/archipelago`;
+- `mailbox-info.json`, `runtime-export.json`, `client.json`, and `game.json` were present together;
+- the AP client successfully authenticated and bound to the generated seed/team/slot;
+- two precollected starter talent ranks were received by the ToME character;
+- ToME recorded level-2, level-3, and Trollmire zone checks in `game.json`;
+- while the AP client was disconnected, those checks remained local rather than being lost;
+- reconnecting the AP client sent the pending checks and reward delivery resumed.
+
+This specifically validates the core bidirectional filesystem bridge and reconnect catch-up path that previously failed during development.
+
+## Generator facts verified from current source
+
+- Boss manifest: 16 checks.
+- Zone-entry manifest: 18 checks when enabled.
+- Quest manifest: 7 major checks or 11 with the four Tier-2 zone objectives.
+- Shop manifest: 42 merchants and 1/2/3 parcels per store = 42/84/126 checks.
+- Victory: 1 check.
+- Default illustrative 298-item build with all fixed checks enabled leaves 126 advancement checks.
+- Fixed checks consume the existing reward budget; normal generation does not add Vitality filler merely to accommodate them.
+- Shop locations reject logical advancement from any world.
+
+## Still not claimed
+
+- No broad full-campaign sample across random builds.
+- No exhaustive live test of every boss/zone/quest/shop observer.
+- No exhaustive prodigy/evolution/resource/support-tree matrix.
+- No broad crash/save-rollback torture test.
+- No claim that `readiness` proves combat solvability.
+- Upstream Archipelago `WorldTestBase` should still be run in the clean pinned checkout used to package the final release artifact.

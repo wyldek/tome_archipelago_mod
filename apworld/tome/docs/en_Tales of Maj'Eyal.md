@@ -1,19 +1,29 @@
+\
 # Tales of Maj'Eyal
 
-This integration creates a seed-selected Archipelago Adventurer. The configured class/generic counts choose random player-facing talent categories, and Technique / Combat Training is always included as an additional mandatory category. Each received talent item grants one raw rank. Stat rewards add five points to one named stat, and prodigies are individually selected by the seed.
+The ToME Archipelago integration creates a seed-selected **Archipelago Adventurer** for Tales of Maj'Eyal 1.7.6.
 
-Selected prodigies may add their own rankable talent categories. Those categories add their rank items and an equal number of locations to that seed; ranks received before the corresponding prodigy remain pending until the category is enabled.
+The configured random class/generic counts select player-facing talent categories from a runtime-generated catalog. Technique / Combat Training is always included as an additional mandatory category. Talent items are named `<Category>: <Talent>` and each received copy grants one raw rank. Stat items are named `+5 <Stat>`. Specific prodigies are named `Prodigy: <Name>`.
 
-Native equipment and loot remain entirely in ToME. AP boss checks are additive observations of native boss defeats: they do not replace XP, drops, artifacts, gold, quest rewards, or other game rewards.
+Selected prodigies may add their own rankable categories. Hard talent dependencies can add support categories and precollect one enabling rank. Precollected ranks are removed from the shuffled item pool, so every shuffled ToME item still corresponds to exactly one active ToME location.
 
-Locations are a configurable mixture of bosses, zone exploration, major/zone quests, paid shop parcels, and variable level-reward locations. Enabled fixed checks consume the existing shuffled reward budget first, and level checks fill the remainder so item and location counts remain exactly equal without manufacturing filler. Paid shop parcels are optional gold sinks that may contain useful/filler/trap items but reject logical progression items. Campaign victory releases only still-unchecked variable advancement rewards and does not invent uncompleted boss/story/shop checks.
+Locations are a configurable mixture of:
 
-AP progression belongs to the AP slot. After a ToME death/restart, a fresh character using the same seed reconstructs the same selected build and replays the items already received by that slot, while local level, equipment, and campaign progress restart normally.
+- dynamic advancement checks named `Advancement LL — Reward RR`;
+- 16 native boss-defeat observers;
+- 18 optional zone-entry checks;
+- 7 major quest checks plus 4 optional Tier-2 zone objectives;
+- 42 eligible merchants with 1–3 optional paid parcels per store;
+- `Age of Ascendancy — Victory`.
 
-**Unrestricted logic:** the supported default does not model combat strength, survival, real time, or exact campaign pacing. `readiness` is an experimental aggregate heuristic, not a combat-solvability proof.
+Fixed world checks consume the existing shuffled reward budget first and advancement checks fill the remainder; normal generation does not manufacture Vitality filler merely to support enabled checks.
 
-A real, matching schema-2 ToME runtime catalog is required to build this APWorld. Development fixtures and old schema-1 exports are rejected.
+Boss checks are additive observations and do not replace native XP, loot, artifacts, gold, quest rewards, or other game rewards. Zone locations historically use `— Explored` names but trigger on entering the configured zone rather than on full map exploration.
 
-## Location YAML options
+Paid shop parcels are optional gold sinks. They scout and display the exact AP item and recipient before purchase, use `create_as_hint: 0`, and reject logical progression items from any world.
 
-The world exposes `zone_exploration_checks`, `quest_checks`, `shop_checks`, `shop_checks_per_store`, `early_level_max`, and `t1_t2_boss_priority`. Shop mode currently supports only `off` and `non_progression`; a fully excluded shop mode is deliberately not offered because it would require a large filler/trap reserve.
+AP progression belongs to the AP slot. A fresh ToME character bound to the same seed/team/slot can reconstruct the same build and replay already-received upgrades while local level/equipment/campaign progress starts over normally. Checks recorded while the bridge is disconnected are retained locally and sent after reconnect.
+
+`unrestricted` is the supported default logic mode. `readiness` is an experimental aggregate talent/stat heuristic and is not a combat-solvability proof.
+
+A packaged APWorld must be built from a real schema-2 runtime export produced by the current addon. The resulting catalog reflects the content/DLC installed in the ToME installation used for that build.

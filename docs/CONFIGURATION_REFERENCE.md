@@ -1,6 +1,7 @@
-# Exact option definitions and example configurations
+\
+# Configuration reference
 
-The current APWorld options are defined in `apworld/tome/options.py`. The tree-count options describe **random** trees. Technique / Combat Training is always added separately and therefore does not consume a generic-tree slot.
+The current APWorld options are defined in `apworld/tome/options.py`. The tree counts describe **random** categories. Technique / Combat Training is always added separately and does not consume a generic-tree slot.
 
 ## Build options
 
@@ -8,7 +9,7 @@ The current APWorld options are defined in `apworld/tome/options.py`. The tree-c
 
 - Range: 1–20
 - Default: 6
-- Combat Training does not consume this count.
+- Chooses random player-facing class categories from the compiled runtime catalog.
 
 ### `generic_tree_count`
 
@@ -16,33 +17,37 @@ The current APWorld options are defined in `apworld/tome/options.py`. The tree-c
 - Default: 4
 - Mandatory Combat Training is added in addition to this count.
 
-A default `6/4` seed therefore has six random class trees, four random generic trees, and mandatory Combat Training.
+A default 6/4 seed therefore has six random class categories, four random generic categories, and mandatory Combat Training before prodigy/support expansions.
 
 ### `prodigy_count`
 
 - Range: 0–20
 - Default: 5
 
-Specific prodigies are AP items. Prodigies that add rankable talent categories also add those categories' rank items to the seed.
+Chooses distinct specific prodigies. A selected prodigy that grants AP-managed rankable categories also adds the applicable category rank items to the seed.
 
 ### `starting_ranks`
 
 - Range: 0–2
 - Default: 2
 
-These copies are precollected from one seed-selected usable starter talent and removed from the shuffled pool.
+Precollects usable starter talent ranks and removes those copies from the shuffled pool. The first rank is seed-selected from likely starter talents in the selected class categories. With two ranks, the second normally goes into the same talent when its cap permits it; otherwise another starter candidate can be used.
+
+### Stat packages
+
+The 1.0 APWorld does not expose `stat_packages_per_stat` as a YAML option. It uses **10 copies of each of the six `+5` stat packages** (60 stat items total) when constructing the build.
 
 ### `level_ceiling`
 
 - Range: 10–50
 - Default: 40
 
-This is the last level eligible for variable advancement checks. Enabled fixed checks consume the reward/check budget first, and level checks fill whatever budget remains. If the remaining budget is smaller than the number of levels, the generator uses a sparse level schedule instead of creating filler.
+Last level eligible for generated advancement checks. Fixed checks consume the location budget first; level checks fill the remainder across levels 2 through this ceiling. Small builds may use a sparse set of levels rather than creating filler.
 
 ### `logic_mode`
 
-- `unrestricted` (default): ToME upgrades are useful rather than AP-logical progression.
-- `readiness`: experimental aggregate build-growth heuristic. It is not a combat solver.
+- `unrestricted` (default): ToME upgrades are useful rather than AP-logical progression. This is the supported normal mode.
+- `readiness`: experimental aggregate talent/stat placement heuristic. It is not a combat solver.
 
 ## Location options
 
@@ -50,49 +55,60 @@ This is the last level eligible for variable advancement checks. Enabled fixed c
 
 - `true` (default) / `false`
 
-Adds the curated T1/T2 and major campaign zone-entry checks. These checks replace level checks within the same item budget; enabling them does not add filler.
+Adds 18 curated zone-entry locations. Despite historical `— Explored` names, the check is awarded on entering the configured zone, not on revealing every map tile. These checks replace level checks within the same reward budget.
 
 ### `quest_checks`
 
-- `none`: no curated quest checks
-- `major`: seven deterministic major campaign quest milestones
-- `major_and_zone` (default): the seven major milestones plus the four Tier-2 zone objectives
+- `none`: no curated quest locations
+- `major`: 7 deterministic major campaign milestones
+- `major_and_zone` (default): the 7 major milestones plus 4 Tier-2 zone objectives, for 11 quest locations total
 
-Quest checks replace level checks within the same item budget.
+Quest checks replace level checks within the same reward budget.
 
 ### `shop_checks`
 
-- `off`: no paid shop parcels
-- `non_progression` (default): paid parcels are added to eligible ordinary merchants, but an item rule forbids AP progression items from being placed in them
+- `off`: no paid AP parcels
+- `non_progression` (default): AP parcels appear in eligible ordinary merchants
 
-There is intentionally **no excluded-shop mode** in this beta. Fully excluded shops would require enough filler/trap items to fill every parcel location, which this world does not currently manufacture.
+A shop parcel may hold useful/filler/trap items but rejects **logical advancement from any world**. The client scouts enabled shop locations and displays the exact item and recipient before purchase. Scouting uses `create_as_hint: 0` and does not create a public hint.
 
-Eligible cities are Derth, Last Hope, Elvala, Shatur, and Gates of Morning. Zigur, Iron Council, Angolwen, special quest merchants, and quest-gated services are omitted.
+Eligible towns are Derth, Last Hope, Elvala, Shatur, and Gates of Morning. Zigur, Iron Council, Angolwen, special quest merchants, and quest-gated services are not in the current manifest.
 
 ### `shop_checks_per_store`
 
 - Range: 1–3
 - Default: 3
 
-Controls how many paid parcels appear in each eligible ordinary merchant when `shop_checks` is enabled. With the current 42-store manifest, the values correspond to 42, 84, or 126 shop checks. Shop checks replace level checks and do not add Vitality or other filler to the normal item pool.
+The current manifest contains 42 merchants. The values therefore produce 42, 84, or 126 shop locations. Parcel prices are fixed at 1x/2x/4x each town's base AP price.
 
 ### `early_level_max`
 
 - Range: 1–20
 - Default: 10
 
-Advancement checks at or below this level may contain another world's explicitly requested `early_items`/`local_early_items`. Level 1 itself has no advancement reward location. Curated T1/T2 exploration, zone-quest, and boss checks remain early-safe independently of this cutoff.
+Advancement locations at or below this level can hold another world's explicitly requested `early_items` / `local_early_items`. Level 1 has no advancement location. Curated T1/T2 boss, zone-entry, and zone-quest checks are independently marked early-safe.
 
 ### `t1_t2_boss_priority`
 
 - `true` (default) / `false`
 
-When enabled, the ten standard T1/T2 guardians are Archipelago `PRIORITY` locations. The boss checks still exist when this option is off; they simply become ordinary locations.
+The ten standard T1/T2 guardian locations always exist. When enabled, they are marked Archipelago `PRIORITY`; when disabled they are ordinary locations. Their early-safe status does not depend on this option.
+
+## Unsupported inherited common options
+
+For contract integrity, the world rejects nonempty:
+
+- `start_inventory`
+- `start_inventory_from_pool`
+- `item_links`
+- `exclude_locations`
+
+Use `starting_ranks` rather than custom inventory for normal ToME starters.
 
 ## Default YAML
 
 ```yaml
-name: wyldek
+name: PlayerName
 requires:
   version: 0.6.7
 game: "Tales of Maj'Eyal"
@@ -115,25 +131,30 @@ game: "Tales of Maj'Eyal"
 
 ## Item/check budget
 
-Generation first calculates the real shuffled build-reward pool:
+Generation constructs the exact shuffled build pool:
 
 ```text
-all rank copies in selected random trees
-+ all rank copies in mandatory Combat Training
-+ all rank copies in selected prodigy-granted categories
-+ named +5 stat packages
+rank copies from random class categories
++ rank copies from random generic categories
++ rank copies from mandatory Combat Training
++ rank copies from selected prodigy-added categories
++ rank copies from dependency support categories
++ 60 named +5 stat packages
 + selected prodigies
-- precollected starter/support ranks
+- precollected starter ranks
+- precollected dependency ranks
 = shuffled item count
-= active AP location count
+= active location count
 ```
 
-With ten ordinary four-talent/5-rank random trees, mandatory Combat Training's seven 5-rank talents, sixty stat packages, five prodigies, and two starter ranks, the illustrative baseline is `298` shuffled rewards/checks.
+Fixed world checks then consume location slots from that count; the remaining slots become advancement checks.
 
-Enabled boss/zone/quest/shop locations consume that 298-location budget first. Level checks are then generated to fill the remainder. With the current default fixed-check set, the illustrative 298-reward build has 126 paid shop checks and 126 level checks, with **zero generated Vitality filler copies**.
+For the illustrative ordinary 6/4 build with ten four-talent/5-rank random categories, seven 5-rank Combat Training talents, 60 stat packages, 5 prodigies, and 2 starter ranks:
 
-Real seeds may differ because support trees, talent caps/category sizes, and prodigy-added categories come from the compiled runtime catalog.
+```text
+200 random ranks + 35 Combat Training ranks + 60 stats + 5 prodigies - 2 starters = 298
+```
 
-## Future artifact option
+With all default fixed-location options enabled, that illustrative seed has 172 fixed checks (16 boss + 18 zone + 11 quest + 126 shop + 1 victory) and 126 advancement checks. Real seeds can differ because the runtime catalog supplies actual caps/category sizes and because prodigy/support categories can expand the build.
 
-A world-artifact check option is a likely future extension. It is intentionally not exposed yet because enabling a large artifact pool would substantially increase check density and needs an explicit policy for random/non-guaranteed artifacts.
+Normal generation does not add Vitality filler merely to make the totals match. `Vitality: +1 maximum life` exists as the world's AP filler/admin fallback.
