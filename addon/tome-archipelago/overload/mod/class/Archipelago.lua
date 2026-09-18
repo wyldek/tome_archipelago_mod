@@ -1,7 +1,7 @@
 -- All network communication belongs to the external Python bridge.
 -- This module only reads/writes bounded JSON through the game's filesystem.
 local JSON = require "mod.class.ArchipelagoJSON"
-local M = {root="/tome/archipelago", tick_count=0, last_error=nil}
+local M = {root="/archipelago", tick_count=0, last_error=nil}
 local POINT_FIELDS={"unused_talents","unused_generics","unused_stats","unused_talents_types","unused_prodigies"}
 local STAT_CONSTANTS={str="STAT_STR",dex="STAT_DEX",con="STAT_CON",mag="STAT_MAG",wil="STAT_WIL",cun="STAT_CUN"}
 local function pack(...) return {n=select("#",...),...} end
@@ -29,7 +29,6 @@ local function read(name)
   return nil
 end
 local function write(name,data)
-  fs.mkdir("/tome")
   fs.mkdir(M.root)
   local f=assert(fs.open(M.root.."/"..name,"w"),"Cannot write AP mailbox")
   f:write(JSON.encode(data).."\n")
@@ -40,9 +39,10 @@ M.write=write
 
 function M.ensureMailboxMarker()
   write("mailbox-info.json",{
-    schema=1,
+    schema=2,
     game="Tales of Maj'Eyal",
     addon="tome-archipelago",
+    virtual_root=M.root,
   })
 end
 
@@ -328,11 +328,6 @@ end
 function M.initialize(g,snap)
   local actor=g.player
   if not M.isCharacter(actor) or actor.archipelago_state then return end
-  local is_demo = snap.identity and type(snap.identity.seed_name)=="string" and snap.identity.seed_name:match("^LOCAL%-DEMO%-")
-  if not is_demo then
-    local offline=read("offline-policy.json")
-    assert(offline and offline.schema==1 and offline.confirmed==true,"Configure offline protection and record it before creating an AP character")
-  end
   local c=snap.contract
   local defs,item_keys,locs,tree_defs=validate_runtime(actor,c)
   local base_selected=array_set(c.random_trees)

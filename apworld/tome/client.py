@@ -32,9 +32,10 @@ LOG = logging.getLogger("ToMEArchipelago")
 PERSIST_CATEGORY = "tome_archipelago"
 PERSIST_MAILBOX_KEY = "mailbox"
 MAILBOX_MARKER_NAME = "mailbox-info.json"
-MAILBOX_MARKER_SCHEMA = 1
+MAILBOX_MARKER_SCHEMA = 2
 MAILBOX_MARKER_GAME = "Tales of Maj'Eyal"
 MAILBOX_MARKER_ADDON = "tome-archipelago"
+MAILBOX_MARKER_ROOT = "/archipelago"
 
 
 def _mailbox_marker_valid(path: Path) -> bool:
@@ -49,6 +50,7 @@ def _mailbox_marker_valid(path: Path) -> bool:
         and marker.get("schema") == MAILBOX_MARKER_SCHEMA
         and marker.get("game") == MAILBOX_MARKER_GAME
         and marker.get("addon") == MAILBOX_MARKER_ADDON
+        and marker.get("virtual_root") == MAILBOX_MARKER_ROOT
     )
 
 
