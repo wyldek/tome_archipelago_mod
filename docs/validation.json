@@ -1,0 +1,13 @@
+{
+  "version": "0.2.7-beta",
+  "pytest": {
+    "passed": 101,
+    "skipped": 1,
+    "failed": 0,
+    "skip_reason": "Optional Lupa package unavailable for Lua execution tests"
+  },
+  "local_demo_shop_scouts": "126/126 revealed placement records generated in smoke check",
+  "native_tome_v027": "not_run",
+  "upstream_apworld_tests": "not_run",
+  "two_player_multiworld": "not_run"
+}

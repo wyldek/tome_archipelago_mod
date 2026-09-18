@@ -1,0 +1,136 @@
+{
+  "name": "wanderer-full-1.7.6",
+  "mode": "runtime-player-trees",
+  "mandatory_trees": [
+    "technique/combat-training"
+  ],
+  "exclude_trees": [],
+  "exclude_prodigies": [],
+  "prodigy_rules": {
+    "T_HIGH_THAUMATURGIST": {
+      "bonus_trees": [
+        "spell/thaumaturgy"
+      ]
+    },
+    "T_TECHNOMANCER": {
+      "bonus_trees": [
+        "steamtech/physics",
+        "steamtech/chemistry",
+        "spell/galvanic-technomancy",
+        "spell/terrene-technomancy",
+        "spell/occult-technomancy"
+      ]
+    },
+    "T_FALLEN": {
+      "bonus_trees": [
+        "cursed/gloom",
+        "cursed/crimson-templar",
+        "celestial/dark-sun",
+        "cursed/bloodstained",
+        "celestial/darkside",
+        "cursed/hatred",
+        "celestial/dirge",
+        "celestial/dirges"
+      ]
+    },
+    "T_LICH": {
+      "bonus_trees": [
+        "undead/lich"
+      ],
+      "unlock_mode": "native"
+    },
+    "T_TRICKS_OF_THE_TRADE": {
+      "bonus_trees": [
+        "cunning/stealth",
+        "cunning/scoundrel"
+      ]
+    },
+    "T_WORLDLY_KNOWLEDGE": {
+      "choose_one": [
+        "technique/conditioning",
+        "cunning/survival",
+        "technique/mobility",
+        "technique/field-control",
+        "wild-gift/call",
+        "wild-gift/mindstar-mastery",
+        "psionic/dreaming",
+        "spell/divination",
+        "spell/staff-combat",
+        "spell/stone-alchemy",
+        "celestial/chants",
+        "celestial/light",
+        "chronomancy/chronomancy"
+      ],
+      "suppress_native_on_learn": true
+    },
+    "T_RAKSHOR_CUNNING": {
+      "choose_one": [
+        "undead/ghoul",
+        "undead/skeleton"
+      ],
+      "unlock_mode": "immediate",
+      "cleanup_trees": [
+        "undead/ghoul",
+        "undead/skeleton"
+      ]
+    }
+  },
+  "support_dependencies": {
+    "wild-gift/corrosive-blades": [
+      {
+        "tree": "wild-gift/mindstar-mastery",
+        "talents": [
+          "T_PSIBLADES"
+        ]
+      }
+    ],
+    "wild-gift/oozing-blades": [
+      {
+        "tree": "wild-gift/mindstar-mastery",
+        "talents": [
+          "T_PSIBLADES"
+        ]
+      }
+    ],
+    "chronomancy/temporal-hounds": [
+      {
+        "tree": "chronomancy/temporal-hounds",
+        "talents": [
+          "T_TEMPORAL_HOUNDS"
+        ]
+      }
+    ],
+    "psionic/thought-forms": [
+      {
+        "tree": "psionic/thought-forms",
+        "talents": [
+          "T_THOUGHT_FORMS"
+        ]
+      }
+    ],
+    "wild-gift/summon-advanced": [
+      {
+        "tree": "wild-gift/summon-advanced",
+        "talents": [
+          "T_MASTER_SUMMONER"
+        ]
+      }
+    ],
+    "chronomancy/speed-control": [
+      {
+        "tree": "chronomancy/speed-control",
+        "talents": [
+          "T_TIME_DILATION"
+        ]
+      }
+    ],
+    "spell/advanced-golemancy": [
+      {
+        "tree": "spell/golemancy",
+        "talents": [
+          "T_GOLEM_POWER"
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,17 @@
+name: wyldek
+requires:
+  version: 0.6.7
+game: "Tales of Maj'Eyal"
+"Tales of Maj'Eyal":
+  class_tree_count: 6
+  generic_tree_count: 4
+  prodigy_count: 5
+  starting_ranks: 2
+  level_ceiling: 40
+  logic_mode: unrestricted
+  zone_exploration_checks: true
+  quest_checks: major_and_zone
+  shop_checks: non_progression
+  shop_checks_per_store: 3
+  early_level_max: 10
+  t1_t2_boss_priority: true

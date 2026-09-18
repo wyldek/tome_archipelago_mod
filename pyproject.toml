@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tome-archipelago-tools"
+version = "0.2.7b1"
+description = "ToME Archipelago addon, APWorld, and filesystem bridge"
+requires-python = ">=3.11,<3.14"
+license = {text = "MIT"}
+dependencies = []
+
+[project.optional-dependencies]
+test = ["pytest>=8,<9"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.setuptools.packages.find]
+include = ["tome_ap*", "tools*"]
+exclude = ["tests*", "apworld*"]
