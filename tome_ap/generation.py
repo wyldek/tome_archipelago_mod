@@ -43,8 +43,10 @@ class Settings:
             raise ValidationError("zone_exploration_checks must be boolean")
         if type(self.t1_t2_boss_priority) is not bool:
             raise ValidationError("t1_t2_boss_priority must be boolean")
-        if self.logic_mode not in {"unrestricted", "readiness"}:
-            raise ValidationError("Unknown logic mode")
+        if self.logic_mode != "unrestricted":
+            raise ValidationError(
+                "Readiness mode is disabled; only unrestricted generation is supported"
+            )
         if self.quest_checks not in {"none", "major", "major_and_zone"}:
             raise ValidationError("Unknown quest check mode")
         if self.shop_checks not in {"off", "non_progression"}:

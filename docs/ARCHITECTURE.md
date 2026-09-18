@@ -1,4 +1,3 @@
-\
 # Architecture, mailbox ownership, and recovery
 
 ## Component ownership
@@ -87,13 +86,23 @@ AP progression belongs to the slot. A newly created character deliberately bound
 
 ## Victory
 
-The addon sends `CLIENT_GOAL` only after native Age of Ascendancy victory is observed. The `Age of Ascendancy — Victory` location is also the APWorld completion location. On victory the addon additionally checks any still-unchecked variable advancement locations, but not uncompleted boss/zone/quest/shop locations.
+The addon sends `CLIENT_GOAL` only after native Age of Ascendancy victory is observed. The visible `Age of Ascendancy — Victory` remains an ordinary shuffled check. Generator completion instead uses an addressless `Age of Ascendancy — Completion Event` with a locked progression event item, whose access rule follows the visible Victory location. This keeps beatability evaluation independent of the visible reward's classification. The internal event has no network item/location ID and is not included in the contract, receipt stream, or shuffled budget. On victory the addon additionally checks any still-unchecked variable advancement locations, but not uncompleted boss/zone/quest/shop locations.
 
 ## Runtime catalog and release builds
 
 Player-facing talent categories are exported dynamically from the installed ToME 1.7.6 runtime. `tools/build.py` requires a schema-2 `runtime-export.json` for a release APWorld and rejects old schema-1 or fixture metadata.
 
 A release builder should install the current addon, launch ToME to regenerate the export, then build against the pinned Archipelago 0.6.7 source checkout. This keeps the APWorld catalog aligned with the addon and installed content set.
+
+## Resource initialization and old saves
+
+Each resource receives its native infrastructure and initial AP resource policy once, tracked by a saved `resources_initialized` map. Routine category reconciliation does not refill resources or repeatedly reapply regeneration floors. Existing schema-3 saves without this map adopt the resources used by their selected, extra, or already-known categories without changing current resource values, maxima, regeneration, or the applied receipt cursor. An unseen resource introduced later still initializes once.
+
+## Runtime content and administrative grants
+
+Birth verifies native availability for selected categories and prodigies. A missing unused catalog talent no longer blocks birth. This is per-build validation, not a promise of compatibility with arbitrary content modifications. For an out-of-build talent delivery, the addon validates all catalog members of the category against the installed native category and derives its resources before mutating that category. Valid definitions are saved for subsequent deliveries. Unavailable or mismatched content remains an explicit error; receipt skipping and automatic replay after partial mutation are still forbidden.
+
+The compiler determines installed, non-excluded prodigies before adding their bonus, choice, cleanup, or dependent categories. Absent optional prodigies therefore do not demand their unavailable categories.
 
 ## Optional native-online isolation
 

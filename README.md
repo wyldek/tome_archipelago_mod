@@ -1,5 +1,6 @@
-\
 # Tales of Maj'Eyal — Archipelago integration
+
+**Unreleased source fixes:** This source includes the review corrections described in [Review fixes](docs/REVIEW_FIXES.md). Previously published 1.0.0 binaries do not contain these changes; rebuild both artifacts before distributing the corrected integration.
 
 **Version 1.0.0.** This is the first feature-complete release of the integration for **Tales of Maj'Eyal 1.7.6** and **Archipelago 0.6.7**. Core item/check transport, starter-item delivery, level/zone checks, disconnected check accumulation, and reconnect catch-up have been smoke-tested in the real game. Full-campaign coverage, every prodigy/resource combination, and broad shared-multiworld qualification are still limited; see [Implementation status](docs/IMPLEMENTATION_STATUS.md).
 
@@ -55,7 +56,7 @@ Prodigies can add additional AP-managed categories, and hard talent dependencies
 
 Precollected ranks are real AP items but are removed from the shuffled pool before placement:
 
-- `starting_ranks` precollects 0–2 usable starter ranks. With the default value of 2, both ranks normally go into the same starter talent when its cap permits it; otherwise a second starter can be used.
+- `starting_ranks` precollects 0–2 likely offensive starter ranks. Starter selection is a metadata heuristic, not a guarantee that every equipment/resource combination is immediately usable. With the default value of 2, both ranks normally go into the same starter talent when its cap permits it; otherwise a second starter can be used.
 - A hard dependency may precollect one enabling talent rank from a support category. The remaining ranks in that support category are normal shuffled items.
 
 The item pool is therefore based on the exact runtime catalog:
@@ -179,7 +180,6 @@ game: "Tales of Maj'Eyal"
   prodigy_count: 5
   starting_ranks: 2
   level_ceiling: 40
-  logic_mode: unrestricted
   zone_exploration_checks: true
   quest_checks: major_and_zone
   shop_checks: non_progression
@@ -190,7 +190,7 @@ game: "Tales of Maj'Eyal"
 
 See [Configuration reference](docs/CONFIGURATION_REFERENCE.md) for exact ranges and semantics. Nonempty generic `start_inventory`, `start_inventory_from_pool`, `item_links`, and `exclude_locations` are deliberately rejected for this world; use `starting_ranks` for ToME starters.
 
-`unrestricted` is the supported default logic mode. `readiness` is an experimental aggregate talent/stat heuristic; it is not a combat solver and does not prove a random build can finish ToME.
+Generation now uses **unrestricted only**. There is no player-facing logic-mode option; readiness generation is disabled, including through the core generation API. Existing YAMLs should omit `logic_mode`. Unrestricted logic does not prove that every generated build can finish ToME.
 
 ## Building the release artifacts from source
 
@@ -202,9 +202,12 @@ python tools/build.py --addon-only
 
 A reproducible `.apworld` additionally needs a **fresh schema-2 `runtime-export.json` from ToME 1.7.6 using the current addon**, plus an Archipelago 0.6.7 source checkout. The release catalog intentionally reflects the content/DLC installed in the ToME installation used for that export.
 
+Release packaging requires the test dependencies, Git, and a clean Archipelago checkout at tag `0.6.7`. The packager runs the standalone suite with Lupa required, runs native APWorld tests against the staged catalog, and verifies packaged code/catalog bytes before copying the final APWorld.
+
 Typical Windows flow after launching ToME once with the current addon:
 
 ```powershell
+python -m pip install -e ".[test]"
 python tools/build.py `
   --export "$env:USERPROFILE\T-Engine\4.0\tome\archipelago\runtime-export.json" `
   --ap-root C:\dev\Archipelago `
@@ -217,8 +220,11 @@ That produces/stages the compiled catalog and copies the officially packaged `to
 
 1.0.0 is intended as the first usable, feature-complete release of the current design, not a claim that every ToME combination has been exhaustively tested. Core bridge transport and reconnect behavior have been exercised in the real game. The remaining qualification backlog includes full campaigns, broad multiworld play, every optional location family, every installed-DLC/prodigy/resource combination, and crash/save edge cases.
 
+Do not enable this addon alongside Rosen's ToME Archipelago addon. Both declare the internal addon name `archipelago`, but they implement different clients, item models, and seed contracts.
+
 ## Project docs
 
+- [Review fixes and verification limits](docs/REVIEW_FIXES.md)
 - [Installation and source build](docs/INSTALL.md)
 - [Configuration reference](docs/CONFIGURATION_REFERENCE.md)
 - [Ruleset](docs/RULESET.md)

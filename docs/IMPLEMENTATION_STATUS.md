@@ -1,5 +1,6 @@
-\
 # Implementation status — 1.0.0
+
+**Unreleased review patch:** See [Review fixes](REVIEW_FIXES.md) for code corrections and their local regression evidence. The real-game smoke test below describes the earlier 1.0.0 baseline, not a new in-game qualification of this patch. The published artifacts must be rebuilt.
 
 ## Release status
 
@@ -12,9 +13,9 @@ Core end-to-end behavior has been exercised in the real game: the client bound t
 | Random trees | Runtime-catalog 6/4 default with configurable counts | Large variety of real seeds and DLC sets |
 | Mandatory tree | Combat Training added without consuming generic count | Broad real-build use |
 | Runtime catalog | Schema-2 installed player-tree export with real IDs/caps/resources/prodigies | Regenerate/inspect for each release content set |
-| Starters | 0–2 precollected usable talent ranks | More edge-case starter categories |
+| Starters | 0–2 precollected likely offensive talent ranks | More edge-case starter categories |
 | Hard dependencies | Reviewed transitive support trees + precollected enabling ranks | Additional native prerequisite audits |
-| Resources | Runtime-driven pool enabling + baseline regeneration policy | Every unusual resource combination |
+| Resources | One-time runtime resource initialization; non-refilling reconciliation; legacy-save adoption | Every unusual resource combination |
 | Prodigies | Broad runtime prodigy pool; bonus-tree expansion; pending ranks | Every evolution/native callback |
 | Stats | Named +5 packages; no discretionary AP stat points | Permanent native stat-effect interactions |
 | Equipment | AP-scoped eligibility bypass; native slot/inventory constraints remain | Unusual equipment systems |
@@ -35,7 +36,7 @@ Core end-to-end behavior has been exercised in the real game: the client bound t
 - The packaged APWorld represents the content/DLC present in the schema-2 runtime export used to build it.
 - Boss/zone/quest manifests are curated rather than exhaustive.
 - Artifact checks are not implemented.
-- `unrestricted` is intentionally light logic; `readiness` is heuristic and does not prove combat solvability.
+- Unrestricted is the only supported generation mode and remains intentionally light logic. Readiness is disabled; no combat-solvability guarantee is made.
 - Full campaign completion has not been broadly qualified across random builds.
 - Some prodigy/evolution and resource combinations are expected to be strange even when mechanically valid.
 - The optional developer network-isolation tools remain in the repository, but the runtime no longer requires or reads an offline-policy acknowledgement.

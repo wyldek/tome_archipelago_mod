@@ -8,7 +8,6 @@ game: "Tales of Maj'Eyal"
   prodigy_count: 5
   starting_ranks: 2
   level_ceiling: 40
-  logic_mode: unrestricted
   zone_exploration_checks: true
   quest_checks: major_and_zone
   shop_checks: non_progression

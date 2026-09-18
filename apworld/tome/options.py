@@ -36,13 +36,6 @@ class LevelCeiling(Range):
     range_end = 50
     default = 40
 
-class LogicMode(Choice):
-    """Unrestricted is the supported default. Readiness is an experimental placement heuristic, not a combat solver."""
-    display_name = "Logic Mode"
-    option_unrestricted = 0
-    option_readiness = 1
-    default = 0
-
 class ZoneExplorationChecks(DefaultOnToggle):
     """Add curated dungeon/campaign zone-entry checks. Enabled checks replace level-up checks rather than increasing the item pool."""
     display_name = "Zone Exploration Checks"
@@ -87,7 +80,6 @@ class ToMEOptions(PerGameCommonOptions):
     prodigy_count: ProdigyCount
     starting_ranks: StartingRanks
     level_ceiling: LevelCeiling
-    logic_mode: LogicMode
     zone_exploration_checks: ZoneExplorationChecks
     quest_checks: QuestChecks
     shop_checks: ShopChecks

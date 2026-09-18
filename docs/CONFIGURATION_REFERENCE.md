@@ -1,4 +1,3 @@
-\
 # Configuration reference
 
 The current APWorld options are defined in `apworld/tome/options.py`. The tree counts describe **random** categories. Technique / Combat Training is always added separately and does not consume a generic-tree slot.
@@ -31,7 +30,7 @@ Chooses distinct specific prodigies. A selected prodigy that grants AP-managed r
 - Range: 0–2
 - Default: 2
 
-Precollects usable starter talent ranks and removes those copies from the shuffled pool. The first rank is seed-selected from likely starter talents in the selected class categories. With two ranks, the second normally goes into the same talent when its cap permits it; otherwise another starter candidate can be used.
+Precollects likely offensive starter talent ranks and removes those copies from the shuffled pool. The first rank is seed-selected from likely starter talents in the selected class categories. With two ranks, the second normally goes into the same talent when its cap permits it; otherwise another starter candidate can be used. Selection uses runtime tactical metadata and a fallback; it does not certify every starter/equipment combination.
 
 ### Stat packages
 
@@ -44,10 +43,9 @@ The 1.0 APWorld does not expose `stat_packages_per_stat` as a YAML option. It us
 
 Last level eligible for generated advancement checks. Fixed checks consume the location budget first; level checks fill the remainder across levels 2 through this ceiling. Small builds may use a sparse set of levels rather than creating filler.
 
-### `logic_mode`
+### Logic policy (not configurable)
 
-- `unrestricted` (default): ToME upgrades are useful rather than AP-logical progression. This is the supported normal mode.
-- `readiness`: experimental aggregate talent/stat placement heuristic. It is not a combat solver.
+Generation uses unrestricted logic. ToME upgrades are useful rather than AP-logical progression, and no combat-solvability guarantee is made. The public `logic_mode` option has been removed. Omit that key from player YAMLs. Readiness is disabled rather than repaired; attempts to generate it through the internal settings API are also rejected.
 
 ## Location options
 
@@ -119,7 +117,6 @@ game: "Tales of Maj'Eyal"
   prodigy_count: 5
   starting_ranks: 2
   level_ceiling: 40
-  logic_mode: unrestricted
 
   zone_exploration_checks: true
   quest_checks: major_and_zone

@@ -199,28 +199,41 @@ function M.exportCatalog()
 end
 
 -- Contract/runtime validation ------------------------------------------------
+local function runtimeTalent(actor,item)
+  local tid=actor[item.symbol]
+  assert(type(tid)=="string" and tid:match("^T_[A-Z0-9_]+$"),
+    "Unavailable talent constant "..tostring(item.symbol).."; check installed content")
+  local t=actor:getTalentFromId(tid)
+  assert(t and t.type,"Unavailable talent definition "..tostring(item.symbol))
+  if item.kind=="talent" then
+    assert(t.type[1]==item.tree,"Talent/category mismatch for "..item.symbol)
+    assert((t.points or 1)==item.cap,"Talent cap differs from exported catalog for "..item.symbol)
+  end
+  return t,tid
+end
+
 local function validate_runtime(actor,c)
   assert(c.schema==3 and c.game_version=="1.7.6","Catalog does not target the supported ToME version")
-  assert(actor.learnTalent and actor.getTalentLevelRaw and actor.learnTalentType and actor.incStat,"Missing required engine adapters")
+  assert(actor.learnTalent and actor.getTalentLevelRaw and actor.learnTalentType and actor.knowTalentType and actor.incStat,"Missing required engine adapters")
   assert(type(actor.stats)=="table","Unexpected ActorStats representation")
   local ids,defs,item_keys,locations,tree_defs={},{},{},{},{}
   for _,tree in ipairs(c.trees) do
     assert(type(tree.key)=="string" and not tree_defs[tree.key],"Duplicate/invalid selected tree")
     tree_defs[tree.key]=tree
   end
+  local required={}
+  for _,key in ipairs(c.build_item_keys or {}) do required[key]=true end
+  for _,key in ipairs(c.prodigies or {}) do required[key]=true end
   for _,item in ipairs(c.items) do
     assert(whole(item.code,1,2147483647) and not ids[item.code],"Duplicate/invalid item ID")
     assert(type(item.key)=="string" and not item_keys[item.key],"Duplicate/invalid item key")
     ids[item.code]=true; defs[tostring(item.code)]=item; item_keys[item.key]=item
     if item.kind=="talent" or item.kind=="prodigy" then
       assert(type(item.symbol)=="string" and item.symbol:match("^T_[A-Z0-9_]+$"),"Invalid talent constant")
-      local tid=actor[item.symbol]
-      assert(type(tid)=="string" and tid:match("^T_[A-Z0-9_]+$"),"Unavailable talent constant "..item.symbol)
-      local t=actor:getTalentFromId(tid)
-      assert(t and t.type,"Unavailable talent definition")
-      if item.kind=="talent" then
-        assert(t.type[1]==item.tree,"Talent/category mismatch")
-        assert((t.points or 5)==item.cap,"Talent cap differs from exported catalog")
+      -- The catalog lists all possible items, but only this build's content
+      -- is mandatory at birth. Admin deliveries are validated when received.
+      if required[item.key] or (item.kind=="talent" and tree_defs[item.tree]) then
+        runtimeTalent(actor,item)
       end
     elseif item.kind=="stat" then
       assert(STAT_CONSTANTS[item.stat] and item.amount==5,"Invalid stat package")
@@ -251,10 +264,13 @@ local RESOURCE_REGEN={
   psi=0.5,feedback=0.5,steam=1,soul=0.25,equilibrium=-0.5,
 }
 
-local function enableResource(actor,short)
+local function enableResource(actor,s,short)
+  -- Saved per-resource initialization, shared by every category using the pool.
+  -- Reconciliation must never refill resources or undo temporary regen effects.
+  if s.resources_initialized[short] then return end
   local R=require "engine.interface.ActorResource"
   local r=R.resources_def and R.resources_def[short]
-  if not r then return end
+  assert(r,"Unavailable resource "..tostring(short))
   if type(r.talent)=="string" and actor:getTalentLevelRaw(r.talent)<=0 then
     M.withGrant(actor,function() actor:learnTalent(r.talent,true,1) end)
   end
@@ -271,6 +287,19 @@ local function enableResource(actor,short)
   if type(current)~="number" then actor[short]=type(mn)=="number" and mn or 0 end
   if type(mx)=="number" and mx>0 and short~="equilibrium" and short~="paradox" then
     actor[short]=math.max(actor[short],math.min(mx,50))
+  end
+  s.resources_initialized[short]=true
+end
+
+local function migrateResourceState(actor,s)
+  if s.resources_initialized then return end
+  s.resources_initialized={}
+  -- Old schema-3 saves already had their active pools initialized. Mark them
+  -- without changing current values, maxima, regeneration, or receipt cursors.
+  for key,tree in pairs(s.tree_defs or {}) do
+    if s.selected_trees[key] or s.extra_trees[key] or actor:knowTalentType(key) then
+      for _,short in ipairs(tree.resources or {}) do s.resources_initialized[short]=true end
+    end
   end
 end
 
@@ -297,11 +326,59 @@ local function enableBaselineUtilities(actor)
   if actor.T_SHOOT and not actor.auto_shoot_talent then actor.auto_shoot_talent=actor.T_SHOOT end
 end
 
+local TREE_ITEM_INDEX=setmetatable({}, {__mode="k"})
+local function itemsForTree(s,tree_key)
+  local index=TREE_ITEM_INDEX[s]
+  if not index then
+    index={}
+    for _,item in pairs(s.item_keys) do
+      if item.kind=="talent" then
+        index[item.tree]=index[item.tree] or {}
+        table.insert(index[item.tree],item)
+      end
+    end
+    for _,items in pairs(index) do
+      table.sort(items,function(a,b) return a.symbol<b.symbol end)
+    end
+    TREE_ITEM_INDEX[s]=index
+  end
+  return index[tree_key] or {}
+end
+
+local function resolveTreeDefinition(actor,s,tree_key)
+  if s.tree_defs[tree_key] then return s.tree_defs[tree_key] end
+  -- Old and new contracts list out-of-build ITEMS, not all TREE metadata.
+  -- Reconstruct an admin category from the installed registry and catalog;
+  -- validate every member before learning the category or changing resources.
+  local T=require "engine.interface.ActorTalents"
+  local R=require "engine.interface.ActorResource"
+  local native=T.talents_types_def and T.talents_types_def[tree_key]
+  assert(type(native)=="table","Unavailable admin category "..tostring(tree_key))
+  local items=itemsForTree(s,tree_key)
+  assert(#items>0,"Admin category is absent from the seed catalog: "..tree_key)
+  local symbols,resources,seen=JSON.array(),JSON.array(),{}
+  for _,item in ipairs(items) do
+    local t=runtimeTalent(actor,item)
+    symbols[#symbols+1]=item.symbol
+    for _,r in ipairs(R.resources_def or {}) do
+      local short=r.short_name
+      if rawget(t,short)~=nil or rawget(t,"sustain_"..short)~=nil or rawget(t,"drain_"..short)~=nil then
+        if not seen[short] then seen[short]=true; resources[#resources+1]=short end
+      end
+    end
+  end
+  table.sort(resources)
+  local tree={key=tree_key,name=native.name or tree_key,
+    kind=native.generic and "generic" or "class",symbols=symbols,resources=resources}
+  s.tree_defs[tree_key]=tree
+  return tree
+end
+
 local function enableTree(actor,s,tree_key)
-  local tree=assert(s.tree_defs[tree_key],"Unknown build tree "..tostring(tree_key))
+  local tree=resolveTreeDefinition(actor,s,tree_key)
   local known=actor:knowTalentType(tree_key)
   M.withGrant(actor,function()
-    actor:learnTalentType(tree_key,true)
+    if not known then actor:learnTalentType(tree_key,true) end
     actor.talents_types_mastery=actor.talents_types_mastery or {}
     -- Preserve mastery changes that are themselves part of a prodigy effect.
     -- AP only supplies the category and its ranks; it does not erase native
@@ -310,7 +387,7 @@ local function enableTree(actor,s,tree_key)
       actor.talents_types_mastery[tree_key]=1.0
     end
   end)
-  for _,r in ipairs(tree.resources or {}) do enableResource(actor,r) end
+  for _,r in ipairs(tree.resources or {}) do enableResource(actor,s,r) end
 end
 
 -- LocationScout metadata -----------------------------------------------------
@@ -374,7 +451,7 @@ function M.initialize(g,snap)
     schema=3,identity=snap.identity,contract=c,items=defs,item_keys=item_keys,
     locations=locs,tree_defs=tree_defs,selected_trees=base_selected,
     bonus_tree_rules=bonus_tree_rules,prodigy_bonus=c.prodigy_bonus or {},
-    prodigy_received={},extra_trees={},pending={},
+    prodigy_received={},extra_trees={},pending={},resources_initialized={},
     applied_count=0,received_ids={},checks={},revision=0,goal=false,
     scouts=scout_map(snap,locs),
     grants={},blocked_native_grants=0,blocked_native_categories=0,blocked_native_mastery=0,
@@ -397,7 +474,7 @@ function M.initialize(g,snap)
 end
 
 local function applyTalentRank(actor,item)
-  local tid=assert(actor[item.symbol],"Unknown received talent")
+  local _,tid=runtimeTalent(actor,item)
   local before=actor:getTalentLevelRaw(tid)
   if before<item.cap then
     M.withGrant(actor,function() actor:learnTalent(tid,true,1) end)
@@ -417,24 +494,22 @@ end
 -- one of the seed's pre-existing categories.
 local function normalizeTreeRanks(actor,s,tree)
   M.withGrant(actor,function()
-    for _,item in pairs(s.item_keys) do
-      if item.kind=="talent" and item.tree==tree then
-        local tid=actor[item.symbol]
-        if tid then
-          local target=targetOwnedRank(s,item)
-          local now=actor:getTalentLevelRaw(tid)
-          while now>target do
-            actor:unlearnTalent(tid)
-            local after=actor:getTalentLevelRaw(tid)
-            assert(after<now,"Could not remove non-AP talent rank from "..item.symbol)
-            now=after
-          end
-          while now<target do
-            actor:learnTalent(tid,true,1)
-            local after=actor:getTalentLevelRaw(tid)
-            assert(after>now,"Could not restore AP talent rank for "..item.symbol)
-            now=after
-          end
+    for _,item in ipairs(itemsForTree(s,tree)) do
+      local tid=actor[item.symbol]
+      if tid then
+        local target=targetOwnedRank(s,item)
+        local now=actor:getTalentLevelRaw(tid)
+        while now>target do
+          actor:unlearnTalent(tid)
+          local after=actor:getTalentLevelRaw(tid)
+          assert(after<now,"Could not remove non-AP talent rank from "..item.symbol)
+          now=after
+        end
+        while now<target do
+          actor:learnTalent(tid,true,1)
+          local after=actor:getTalentLevelRaw(tid)
+          assert(after>now,"Could not restore AP talent rank for "..item.symbol)
+          now=after
         end
       end
     end
@@ -648,6 +723,7 @@ local function reconcileNativeBonusTrees(actor,s)
   restoreOwnedBaseTrees(actor,s)
   for tree,rules in pairs(s.bonus_tree_rules) do
     if actor:knowTalentType(tree) and prodigyRuleUnlocked(s,tree) then
+      enableTree(actor,s,tree)
       normalizeTreeRanks(actor,s,tree)
       flushPendingTree(actor,s,tree)
     end
@@ -683,6 +759,7 @@ function M.poll(g)
     if not M.identityMatches(s.identity,snap.identity) then error("Save belongs to a different AP seed/team/slot/build") end
     s.scouts=scout_map(snap,s.locations)
     if s.error then return end
+    migrateResourceState(actor,s)
     M.recordZone(actor,g.zone)
     if actor.winner=="full" then M.markVictory(actor) end
     if actor.dead then M.publish(actor); return end

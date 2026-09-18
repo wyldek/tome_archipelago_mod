@@ -1,4 +1,3 @@
-\
 # Tales of Maj'Eyal
 
 The ToME Archipelago integration creates a seed-selected **Archipelago Adventurer** for Tales of Maj'Eyal 1.7.6.
@@ -24,6 +23,6 @@ Paid shop parcels are optional gold sinks. They scout and display the exact AP i
 
 AP progression belongs to the AP slot. A fresh ToME character bound to the same seed/team/slot can reconstruct the same build and replay already-received upgrades while local level/equipment/campaign progress starts over normally. Checks recorded while the bridge is disconnected are retained locally and sent after reconnect.
 
-`unrestricted` is the supported default logic mode. `readiness` is an experimental aggregate talent/stat heuristic and is not a combat-solvability proof.
+Generation uses unrestricted logic only. There is no player-facing logic-mode option; readiness is disabled. Omit `logic_mode` from player YAMLs. No combat-solvability guarantee is made.
 
 A packaged APWorld must be built from a real schema-2 runtime export produced by the current addon. The resulting catalog reflects the content/DLC installed in the ToME installation used for that build.

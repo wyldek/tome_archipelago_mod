@@ -229,7 +229,19 @@ def compile_catalog(export: dict[str, Any], profile: dict[str, Any]) -> Catalog:
 
     excluded_trees = set(profile.get("exclude_trees", []))
     mandatory_trees = tuple(profile.get("mandatory_trees", ["technique/combat-training"]))
-    prodigy_policy = profile.get("prodigy_rules", {})
+    excluded_prodigies = set(profile.get("exclude_prodigies", []))
+    runtime_prodigies = [t for t in talents.values() if t.get("prodigy") is True]
+    if not runtime_prodigies:
+        raise ValidationError("Runtime export contains no actual prodigies (t.uber=true)")
+    available_prodigies = {
+        t["symbol"] for t in runtime_prodigies if t["symbol"] not in excluded_prodigies
+    }
+    # Do this BEFORE computing wanted and its support-dependency closure.
+    # Uninstalled/excluded prodigies must not require their optional categories.
+    prodigy_policy = {
+        symbol: rule for symbol, rule in profile.get("prodigy_rules", {}).items()
+        if symbol in available_prodigies
+    }
     support_policy = profile.get("support_dependencies", {})
     if not isinstance(support_policy, dict):
         raise ValidationError("support_dependencies must be an object keyed by source tree")
@@ -308,10 +320,6 @@ def compile_catalog(export: dict[str, Any], profile: dict[str, Any]) -> Catalog:
             random_eligible=tree_key in set(player_tree_keys),
         ))
 
-    excluded_prodigies = set(profile.get("exclude_prodigies", []))
-    runtime_prodigies = [t for t in talents.values() if t.get("prodigy") is True]
-    if not runtime_prodigies:
-        raise ValidationError("Runtime export contains no actual prodigies (t.uber=true)")
     prodigy_keys: set[str] = set()
     for t in sorted(runtime_prodigies, key=lambda x: x["symbol"]):
         sym = t["symbol"]

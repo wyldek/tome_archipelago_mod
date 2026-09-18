@@ -1,4 +1,3 @@
-\
 # Testing and qualification
 
 ## Automated tests
@@ -6,15 +5,17 @@
 Run from the repository root:
 
 ```powershell
-python -m pytest -q -rs
-python -m compileall -q tome_ap apworld tools tests ToMEClient.py
+python -m pip install -e ".[test]"
+python tools/validate.py
 ```
 
 The Python suite checks deterministic generation, cap-based budgets, stable IDs, option combinations, location allocation, receipt ordering, duplicate copies, wrong-slot rejection, JSON/mailbox validation, and static addon behavior.
 
-`tests/test_lua.py` uses Lupa to execute the real Lua addon against a deliberately small fake engine. It is skipped when Lupa is unavailable. Fake-engine execution can find algorithmic errors but cannot certify native T-Engine callback ordering, serialization, or talent side effects.
+`tests/test_lua.py` uses Lupa to execute the real Lua addon against `tests/lua/engine.lua`, a deliberately small fake engine. Plain developer pytest runs may skip this module without Lupa, but `tools/validate.py`, release packaging, and CI require Lupa and refuse that skip. Additional runtime regressions in `tests/test_review_runtime.py` can also execute through a real local Lua 5.4 shared library during restricted development. Fake-engine execution does not certify native T-Engine callback ordering, serialization, or talent side effects.
 
-The APWorld also contains optional `WorldTestBase` tests to run after staging a real compiled catalog into the pinned Archipelago 0.6.7 source checkout.
+The APWorld contains native `WorldTestBase` and two-slot fill tests. `tools/build.py --package-apworld` runs them after staging a real compiled catalog into a clean Archipelago checkout at tag `0.6.7`, before official packaging. The default configuration explicitly enables inherited fill/beatability tests. A separately staged world can be validated with `python tools/validate.py --ap-root C:\dev\Archipelago`.
+
+`tests/test_review_world_contract.py` uses API doubles to exercise actual APWorld method bodies in the standalone suite. It is not a replacement for native AP fill/solver tests. Test results must identify which layer actually ran. See [Review fixes](REVIEW_FIXES.md) for the scope of the supplied patch's local verification.
 
 ## Required release smoke test
 
@@ -43,7 +44,11 @@ Before publishing a release artifact:
 | Unknown item ID arrives | Explicit sync incompatibility; do not silently convert it to filler. |
 | Native talent grant throws | Stop further grants and surface the error. |
 | Character dies during delivery | Do not accidentally grant to a dead actor/clone. |
-| Admin/overflow copy arrives | Receipt is consumed safely; rank does not exceed the exported cap. |
+| Admin/overflow copy arrives | Valid native/catalog talents outside the rolled categories can initialize their category; repeated ranks obey the cap. Missing/mismatched native definitions stop delivery rather than skipping a receipt. |
+| Idle render polling after spending resources | Resource amount, maximum, and regeneration are unchanged by repeated polling. |
+| Existing save lacks resource-initialization flags | Adopt resources already used by that save without a refill or cursor reset. |
+| Unused optional content is absent | Birth validates selected content; unused catalog entries do not by themselves block birth. |
+| Missing required selected content | Fail validation before initializing the AP character. |
 
 ## Location qualification
 
@@ -73,6 +78,8 @@ For each town tier, verify:
 
 ### Victory
 
+The generator uses a separate addressless completion event that follows the modeled access rule of the visible Victory location. Confirm modeled completion with useful, filler, and progression rewards at the visible check. The internal event is excluded from network IDs, receipts, and shuffled item/location budgets.
+
 Verify native Age of Ascendancy victory checks the victory location, reports `CLIENT_GOAL`, and only auto-checks remaining advancement locations—not unfinished boss/zone/quest/shop checks.
 
 ## Shared-multiworld acceptance
@@ -86,4 +93,4 @@ Repeat at least one check/item while the ToME bridge is disconnected and confirm
 
 ## Full-campaign qualification
 
-A generated seed passing unit tests is not proof that its random build can beat ToME. Record full-campaign runs with different races/difficulties/tree counts and especially unusual resource/prodigy/support-tree combinations. `readiness` remains a heuristic, not a solver.
+A generated seed passing unit tests is not proof that its random build can beat ToME. Record full-campaign runs with different races/difficulties/tree counts and especially unusual resource/prodigy/support-tree combinations. Readiness is unavailable. Unrestricted generation still does not prove combat solvability.

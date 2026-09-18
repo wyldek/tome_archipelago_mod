@@ -1,4 +1,3 @@
-\
 # Ruleset and item/check ownership
 
 ## Seed-selected character
@@ -20,7 +19,7 @@ Ten copies of each stat package are used by the current 1.0 world. Five distinct
 
 ## Starters and hard dependencies
 
-`starting_ranks` precollects 0–2 usable starter talent copies and removes those copies from the shuffled pool.
+`starting_ranks` precollects 0–2 likely offensive starter talent copies and removes those copies from the shuffled pool. Selection is a runtime-metadata heuristic rather than a full equipment/resource usability proof.
 
 A selected category must not contain talents that are permanently unusable solely because another talent/category was not selected. The compiled catalog therefore carries reviewed support dependencies. When an active category has a hard dependency:
 
@@ -80,13 +79,13 @@ Paid shop parcels are optional gold sinks. Their Archipelago item rule forbids `
 
 ### Victory
 
-Native Age of Ascendancy victory checks `Age of Ascendancy — Victory` and also marks any remaining **advancement** locations complete as a safety fallback. It does not fabricate uncompleted boss, zone, quest, or shop checks.
+Native Age of Ascendancy victory checks `Age of Ascendancy — Victory` and also marks any remaining **advancement** locations complete as a safety fallback. It does not fabricate uncompleted boss, zone, quest, or shop checks. AP generation uses a separate internal completion event, with no network ID, so the item shuffled onto the visible Victory check cannot determine whether the generator recognizes completion.
 
 ## AP item classification
 
-In `unrestricted` logic, ToME character upgrades are classified useful rather than logical progression. Foreign progression can still be placed in ordinary ToME locations. Paid shop locations independently reject logical advancement from all worlds.
+In the only supported generation mode, unrestricted logic, ToME character upgrades are classified useful rather than logical progression. Foreign progression can still be placed in ordinary ToME locations. Paid shop locations independently reject logical advancement from all worlds.
 
-`readiness` is an optional experimental aggregate talent/stat heuristic. It can mark ToME upgrades as progression for placement but is not a combat-solvability proof.
+Readiness is disabled and the player-facing logic-mode option has been removed. Unrestricted generation does not prove combat solvability.
 
 ## Death/restart and reconnects
 
@@ -96,7 +95,7 @@ The addon can continue recording local checks in `game.json` while the AP client
 
 ## Resources and requirements
 
-Talent, prodigy, and equipment eligibility requirements are bypassed where needed for the AP character. When selected categories use a ToME resource, the addon enables the resource's native pool plumbing and provides a modest baseline regeneration policy where required for random-build usability.
+Talent, prodigy, and equipment eligibility requirements are bypassed where needed for the AP character. When selected categories use a ToME resource, the addon enables the resource's native pool plumbing and applies the initial resource/regeneration policy once. Later render-loop reconciliation does not refill spent resources or reapply that policy.
 
 Normal inventory/slot constraints remain.
 

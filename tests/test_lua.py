@@ -14,7 +14,7 @@ LUA=ROOT/"addon/tome-archipelago"
 def runtime():
     vm=lupa.LuaRuntime(unpack_returned_tuples=True)
     vm.execute("unpack = unpack or table.unpack")
-    codec=vm.execute((LUA/"overload/mod/class/ArchipelagoJSON.lua").read_text())
+    codec=vm.execute((LUA/"overload/mod/class/ArchipelagoJSON.lua").read_text(encoding="utf-8"))
     vm.globals().JSON=codec
     vm.execute('package.preload["mod.class.ArchipelagoJSON"]=function() return JSON end')
     return vm,codec
@@ -31,20 +31,7 @@ def test_json_rejects_invalid(text):
 
 def engine(receipts_count=2):
     vm,codec=runtime()
-    vm.execute(r'''
-fs={files={}}
-function fs.mkdir(path) return true end
-function fs.open(path,mode)
-  if mode=="r" and not fs.files[path] then return nil end
-  if mode=="w" then fs.files[path]="" end
-  return {
-    read=function(self,n)return fs.files[path] end,
-    write=function(self,s)fs.files[path]=fs.files[path]..s end,
-    close=function(self)end
-  }
-end
-''')
-    ap=vm.execute((LUA/"overload/mod/class/Archipelago.lua").read_text())
+    ap=vm.execute((LUA/"overload/mod/class/Archipelago.lua").read_text(encoding="utf-8"))
     vm.globals().AP=ap
     vm.execute('package.preload["mod.class.Archipelago"]=function() return AP end')
     catalog=fixture_catalog();build=create_build(catalog,Settings(),Random(4));contract=build.contract(catalog)
@@ -53,32 +40,7 @@ end
     receipts=[Receipt(primary.code)]*receipts_count
     snapshot=client_snapshot(identity,contract,receipts,set(),1,True)
     vm.globals().snapshot=codec.decode(json.dumps(snapshot))
-    vm.execute(r'''
-actor={archipelago_character=true,level=1,stats={12,12,12,12,12,12},raw={},definitions={},
-       unused_talents=5,unused_generics=3,unused_stats=9,unused_talents_types=1,unused_prodigies=0,
-       STAT_STR=1,STAT_DEX=2,STAT_CON=3,STAT_MAG=4,STAT_WIL=5,STAT_CUN=6,
-       max_life=100,life=100,talents_types={},talents_types_mastery={}}
-for _,item in ipairs(snapshot.contract.items) do
-  if item.symbol and item.symbol~="" then
-    actor[item.symbol]=item.symbol
-    actor.definitions[item.symbol]={id=item.symbol,type={item.tree~="" and item.tree or "uber/mag",1},points=item.cap,name=item.name}
-  end
-end
-function actor:getTalentFromId(tid)return self.definitions[tid]end
-function actor:getTalentLevelRaw(tid)return self.raw[tid] or 0 end
-function actor:learnTalent(tid,force,nb)
-  assert(force==true,"requirements must be bypassed")
-  self.raw[tid]=(self.raw[tid] or 0)+nb
-  self.unused_talents=self.unused_talents-nb
-end
-function actor:learnTalentType(tree,known)self.talents_types[tree]=known end
-function actor:incStat(id,n)self.stats[id]=self.stats[id]+n end
-function actor:unlearnTalent(id)self.raw[id]=math.max(0,(self.raw[id] or 0)-1)end
-game={player=actor,level={},log=function(...)end}
-fs.files["/archipelago/client.json"]=JSON.encode(snapshot)
-fs.files["/archipelago/offline-policy.json"]='{"schema":1,"confirmed":true,"mode":"test"}'
-function poll() for i=1,20 do AP.poll(game) end end
-''')
+    vm.execute((ROOT/"tests/lua/engine.lua").read_text(encoding="utf-8"))
     return vm,codec,ap,catalog,build,primary
 
 def test_lua_grants_and_point_pools():
@@ -160,7 +122,7 @@ function actor:canWearObject(object)
 end
 loadPrevious=function(...)return actor end
 ''')
-    vm.execute((LUA/"superload/mod/class/Actor.lua").read_text())
+    vm.execute((LUA/"superload/mod/class/Actor.lua").read_text(encoding="utf-8"))
     vm.execute('obj={require={stat=50},level_requirement=40,slot="mainhand"}; allowed=actor:canWearObject(obj)')
     assert vm.globals().allowed is True
     assert vm.globals().obj.require.stat==50 and vm.globals().obj.level_requirement==40

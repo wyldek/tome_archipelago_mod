@@ -7,7 +7,7 @@ from worlds.AutoWorld import World, WebWorld
 from . import components as components
 from .options import ToMEOptions
 from .core.catalog import Catalog
-from .core.generation import Settings, create_build, readiness_thresholds
+from .core.generation import Settings, create_build
 from .core.locations import PRIMARY_NAME_TO_ID
 from .core.model import GAME, LEVEL_ID_STRIDE, level_location_id
 from worlds.generic.Rules import add_item_rule
@@ -16,6 +16,11 @@ _raw = pkgutil.get_data(__name__, "data/catalog.json")
 if not _raw:
     raise RuntimeError("Missing ToME catalog: run tools/build.py with a schema-2 ToME runtime export")
 CATALOG = Catalog(json.loads(_raw))
+
+# Internal AP logic event. Neither name is a network item/location, and neither
+# is included in the shuffled budget or game-side receipt/check contract.
+COMPLETION_EVENT = "Age of Ascendancy Complete"
+COMPLETION_LOCATION = "Age of Ascendancy — Completion Event"
 
 class ToMEItem(Item):
     game = GAME
@@ -60,7 +65,6 @@ class ToMEWorld(World):
             prodigy_count=self.options.prodigy_count.value,
             starting_ranks=self.options.starting_ranks.value,
             level_ceiling=self.options.level_ceiling.value,
-            logic_mode="readiness" if self.options.logic_mode.value == 1 else "unrestricted",
             zone_exploration_checks=bool(self.options.zone_exploration_checks.value),
             quest_checks={0: "none", 1: "major", 2: "major_and_zone"}[self.options.quest_checks.value],
             shop_checks={0: "off", 1: "non_progression"}[self.options.shop_checks.value],
@@ -80,6 +84,11 @@ class ToMEWorld(World):
             if loc.placement == "priority":
                 ap_loc.progress_type = LocationProgressType.PRIORITY
             campaign.locations.append(ap_loc)
+        completion = ToMELocation(self.player, COMPLETION_LOCATION, None, campaign)
+        campaign.locations.append(completion)
+        completion.place_locked_item(
+            ToMEItem(COMPLETION_EVENT, ItemClassification.progression, None, self.player)
+        )
 
     def create_items(self):
         for key in self.build.precollected:
@@ -92,32 +101,25 @@ class ToMEWorld(World):
     def create_item(self, name):
         item = CATALOG.by_name[name]
         classification = ItemClassification.filler if item.kind == "vitality" else ItemClassification.useful
-        if self.build.settings.logic_mode == "readiness":
-            bonus_gate_items = {
-                prodigy_key
-                for prodigy_key, rule in self.build.prodigy_bonus.items()
-                if any(tree in self.build.bonus_trees for tree in rule.get("trees", []))
-            }
-            if (
-                item.kind == "stat"
-                or (item.kind == "talent" and item.tree in self.build.trees)
-                or item.key in bonus_gate_items
-            ):
-                classification = ItemClassification.progression
         return ToMEItem(name, classification, item.code, self.player)
 
     def get_filler_item_name(self):
         return CATALOG.items["vitality"].name
 
     def set_rules(self):
-        # Keep the network Victory check as an ordinary item-bearing location.
-        # For generator logic, the slot is complete once that location has been
-        # swept/checked. The real client still reports CLIENT_GOAL only after
-        # native Age of Ascendancy victory, so server completion is never faked.
+        # Beatability sweeps only collect progression locations. The visible
+        # Victory check remains shuffled, so completion must not depend on its
+        # reward classification or on CollectionState.locations_checked.
         victory_location = self.get_location("Age of Ascendancy — Victory")
-        self.multiworld.completion_condition[self.player] = (
-            lambda state: victory_location in state.locations_checked
+        self.get_location(COMPLETION_LOCATION).access_rule = (
+            lambda state: victory_location.can_reach(state)
         )
+        self.multiworld.completion_condition[self.player] = (
+            lambda state: state.has(COMPLETION_EVENT, self.player)
+        )
+        # Unrestricted logic intentionally does not model combat difficulty.
+        # This event represents modeled reachability, NOT live server victory.
+        # CLIENT_GOAL is still sent only after native campaign victory.
 
         # AP's generic early-item distributor considers every logically reachable
         # location. Unrestricted ToME intentionally has very light access logic,
@@ -141,48 +143,12 @@ class ToMEWorld(World):
                     location,
                     lambda item: not explicitly_requested_early(item),
                 )
-        if self.build.settings.logic_mode == "readiness":
-            talents = [
-                CATALOG.items["talent:" + s]
-                for key in self.build.trees
-                for s in CATALOG.trees[key].symbols
-            ]
-            stats = [i for i in CATALOG.items.values() if i.kind == "stat"]
-
-            bonus_gates = {}
-            for prodigy_key, bonus in self.build.prodigy_bonus.items():
-                for tree in bonus.get("trees", []):
-                    if tree in self.build.bonus_trees:
-                        bonus_gates.setdefault(tree, []).append(CATALOG.items[prodigy_key].name)
-
-            def talent_count(state):
-                total = 0
-                for item in talents:
-                    gates = bonus_gates.get(item.tree)
-                    if gates and not any(state.has(name, self.player) for name in gates):
-                        continue
-                    total += min(item.cap, state.count(item.name, self.player))
-                return total
-
-            def rule_for(level):
-                talent_need, stat_need = readiness_thresholds(CATALOG, self.build, level)
-                return lambda state: (
-                    talent_count(state) >= talent_need
-                    and sum(
-                        min(self.build.settings.stat_packages_per_stat, state.count(i.name, self.player))
-                        for i in stats
-                    ) >= stat_need
-                )
-
-            for loc in self.build.locations:
-                self.get_location(loc.name).access_rule = rule_for(loc.level)
-
     def fill_slot_data(self):
         return self.build.contract(CATALOG)
 
     def write_spoiler(self, spoiler_handle):
         spoiler_handle.write(
-            f"\nToME player {self.player}: EXPERIMENTAL {self.build.settings.logic_mode} combat logic\n"
+            f"\nToME player {self.player}: unrestricted logic (combat solvability is not guaranteed)\n"
         )
         spoiler_handle.write("Random trees: " + ", ".join(self.build.random_trees) + "\n")
         spoiler_handle.write("Mandatory trees: " + ", ".join(self.build.mandatory_trees) + "\n")
