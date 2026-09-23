@@ -251,20 +251,28 @@ def test_early_window_has_minimum_and_extends_only_for_required_ranks():
         quest_checks="none", shop_checks="off", early_level_max=3,
     )
     build = create_build(catalog, settings, Random(1))
+    without_priority = create_build(
+        catalog, Settings(**{**vars(settings), "t1_t2_boss_priority": False}), Random(1)
+    )
     assert len(build.early_talents) == 35
-    assert sum(loc.early for loc in build.locations) >= len(build.early_talents)
-    assert max(loc.level for loc in build.locations if loc.event == "level" and loc.early) > 3
+    usable = sum(loc.early and loc.placement == "default" for loc in build.locations)
+    assert usable >= len(build.early_talents)
+    assert sum(loc.early for loc in build.locations) == usable + 10
+    priority_cutoff = max(loc.level for loc in build.locations if loc.event == "level" and loc.early)
+    normal_cutoff = max(loc.level for loc in without_priority.locations if loc.event == "level" and loc.early)
+    assert priority_cutoff > normal_cutoff > 3
+    assert sum(loc.early and loc.placement == "default" for loc in without_priority.locations) >= 35
     assert all(loc.early for loc in build.locations if loc.event == "level" and loc.level <= 3)
 
 
-def test_early_window_rejects_an_impossible_non_shop_budget():
+def test_early_window_rejects_an_impossible_usable_budget():
     export, profile = fixture_export(classes=3, generics=0)
     combat = next(t for t in export["trees"] if t["key"] == "technique/combat-training")
     profile["anchor_talents"] = {
         combat["key"]: [sym for sym in combat["symbols"] for _ in range(5)]
     }
     catalog = compile_catalog(export, profile)
-    with pytest.raises(ValidationError, match="Only .* non-shop ToME checks"):
+    with pytest.raises(ValidationError, match="Only .* early-useful ToME checks"):
         create_build(catalog, Settings(
             class_tree_count=3, generic_tree_count=0, prodigy_count=0,
             starting_ranks=0, level_ceiling=50, zone_exploration_checks=False,

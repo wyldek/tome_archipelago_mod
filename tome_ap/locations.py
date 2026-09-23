@@ -5,7 +5,8 @@ addon only observes the accomplishment and reports the corresponding AP check.
 
 `logic_level` is descriptive pacing metadata. `placement` controls Archipelago
 fill behavior (default/priority/non_progression), while `early` identifies locations
-that are safe targets for another world's explicit ``early_items`` request.
+allowed during the early pass. Priority locations cannot receive early useful
+items such as ToME talents; they remain available for early progression items.
 """
 from __future__ import annotations
 from dataclasses import dataclass
@@ -42,7 +43,7 @@ class PrimaryLocation:
 
 # Bosses ---------------------------------------------------------------------
 # The ten standard T1/T2 guardians are deliberately PRIORITY locations and are
-# also part of the early-safe location band.
+# in the early band for progression items, but not early useful talents.
 BOSS_LOCATIONS: tuple[PrimaryLocation, ...] = (
     PrimaryLocation("Trollmire — Guardian Defeated", 790_101, "boss", {
         "zone": "trollmire", "names": ["Prox the Mighty", "Shax the Slimy"]}, 7, "priority", True),

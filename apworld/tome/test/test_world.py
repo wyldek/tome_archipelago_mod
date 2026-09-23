@@ -1,15 +1,45 @@
 """Run inside the pinned Archipelago checkout; these use real AP classes/fill."""
 from argparse import Namespace
+from collections import Counter
 import unittest
 
-from BaseClasses import CollectionState, ItemClassification, MultiWorld
+from BaseClasses import CollectionState, Item, ItemClassification, Location, MultiWorld, Region
 from Fill import distribute_items_restrictive
-from test.general import gen_steps
+from test.general import TestWorld, gen_steps, setup_multiworld
 from worlds.AutoWorld import call_all
+from worlds.generic.Rules import add_item_rule
 
 from .. import CATALOG, COMPLETION_EVENT, COMPLETION_LOCATION, ToMEItem, ToMEWorld
 from ..core.model import CATALOG_VERSION, CONTRACT_VERSION
 from .bases import ToMETestBase
+
+
+def assert_early_ranks_placed(test, multiworld, world):
+    requested = Counter(CATALOG.items[key].name for key in world.build.early_talents)
+    local_early = {
+        loc.name for loc in world.build.locations
+        if loc.early and loc.placement == "default"
+    }
+    for name, count in requested.items():
+        chosen = world._early_placed_ranks[name]
+        test.assertEqual(len(chosen), count, name)
+        test.assertEqual(len({id(item) for item in chosen}), count, name)
+        for item in chosen:
+            test.assertIsNotNone(item.location, name)
+            test.assertTrue(item.location.locked, name)
+            if item.location.player == world.player:
+                test.assertIn(item.location.name, local_early, name)
+
+
+def assert_remaining_mastery_copies_legal_late(test, multiworld, world):
+    name = CATALOG.items["talent:T_WEAPON_COMBAT"].name
+    chosen = {id(item) for item in world._early_placed_ranks[name]}
+    remaining = [item for item in multiworld.itempool
+                 if item.player == world.player and item.name == name and id(item) not in chosen]
+    test.assertGreaterEqual(len(remaining), 1)
+    late = next(multiworld.get_location(loc.name, world.player) for loc in world.build.locations
+                if not loc.early and loc.placement == "default")
+    test.assertTrue(all(late.item_rule(item) for item in remaining))
 
 
 class TestDefaultWorld(ToMETestBase):
@@ -49,12 +79,26 @@ class TestNoStarters(ToMETestBase):
 
 
 class TestTightEarlyWindow(ToMETestBase):
-    options = {"early_level_max": 3, "zone_exploration_checks": False,
+    options = {"class_tree_count": 1, "generic_tree_count": 0,
+               "prodigy_count": 0, "starting_ranks": 0, "shop_checks": "off",
+               "early_level_max": 3, "zone_exploration_checks": False,
                "quest_checks": "none"}
 
-    def test_early_rank_requests_fit_tome_checks(self):
-        early_locations = [loc for loc in self.world.build.locations if loc.early]
+    def test_native_fill_places_early_ranks_and_leaves_other_copies_legal(self):
+        early_locations = [loc for loc in self.world.build.locations
+                           if loc.early and loc.placement == "default"]
+        priority_bosses = [loc for loc in self.world.build.locations
+                           if loc.early and loc.placement == "priority"]
+        self.assertEqual(len(priority_bosses),
+                         10 if self.options.get("t1_t2_boss_priority", True) else 0)
         self.assertGreaterEqual(len(early_locations), len(self.world.build.early_talents))
+        distribute_items_restrictive(self.multiworld)
+        assert_early_ranks_placed(self, self.multiworld, self.world)
+        assert_remaining_mastery_copies_legal_late(self, self.multiworld, self.world)
+
+
+class TestTightEarlyWindowNoBossPriority(TestTightEarlyWindow):
+    options = {**TestTightEarlyWindow.options, "t1_t2_boss_priority": False}
 
 
 class TestCompletionEvent(ToMETestBase):
@@ -117,3 +161,37 @@ class TestTwoToMESlots(unittest.TestCase):
         distribute_items_restrictive(multiworld)
         self.assertTrue(multiworld.can_beat_game())
         self.assertTrue(multiworld.fulfills_accessibility())
+
+
+class TestMixedWorldEarlyFill(unittest.TestCase):
+    def test_requested_tome_ranks_can_land_in_another_game(self):
+        options = dict(TestTightEarlyWindow.options)
+        multiworld = setup_multiworld([ToMEWorld, TestWorld], seed=20260923,
+                                      options=[options, {}])
+        world = multiworld.worlds[1]
+        target = CATALOG.items["talent:T_WEAPON_COMBAT"].name
+        self.assertEqual(world.multiworld.early_items[1][target], 2)
+
+        # AP's built-in test game supplies two reachable checks. Force the
+        # requested Combat Accuracy copies across the world boundary while the
+        # other ToME early ranks still use normal ToME early checks.
+        host = Region("Menu", 2, multiworld)
+        host.locations.extend(Location(2, f"Foreign Early {i}", 900_000 + i, host)
+                              for i in range(2))
+        multiworld.regions.append(host)
+        multiworld.itempool.extend(Item(f"Foreign Filler {i}", ItemClassification.filler,
+                                        900_000 + i, 2) for i in range(2))
+        multiworld.completion_condition[2] = lambda state: True
+        for loc in world.build.locations:
+            if loc.early and loc.placement == "default":
+                add_item_rule(multiworld.get_location(loc.name, 1),
+                              lambda item: not (world._early_rules_active and
+                                                item.player == 1 and item.name == target))
+        for location in host.locations:
+            add_item_rule(location, lambda item: item.player == 2 or
+                          (item.player == 1 and item.name == target))
+
+        distribute_items_restrictive(multiworld)
+        assert_early_ranks_placed(self, multiworld, world)
+        self.assertEqual({item.location.player for item in world._early_placed_ranks[target]}, {2})
+        assert_remaining_mastery_copies_legal_late(self, multiworld, world)

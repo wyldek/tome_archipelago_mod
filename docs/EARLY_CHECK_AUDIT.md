@@ -10,27 +10,31 @@ The largest possible request within the allowed option ranges (20 random class t
 
 These counts are requests to Archipelago's *multiworld* early-item pool. They are not free character-start ranks or local-only placements. A starter or support rank already granted reduces the request for the same item. For instance, one precollected rank of a two-rank request leaves one early request.
 
-## Locations ToME allows for early items
+## Locations usable for ToME's early talent ranks
 
-For each generated ToME world, the number of early-safe locations is:
+ToME talents are Archipelago `useful` items. In Archipelago 0.6.7, the early-item pass places useful items only in reachable non-priority locations. It reserves `PRIORITY` locations for the early progression pass. For each generated ToME world, the usable early-talent capacity is:
 
-`advancement rewards at levels 2 through min(effective early cutoff, level_ceiling) + 10 early boss checks + (10 if zone exploration is on) + (4 if quest checks are major_and_zone)`.
+`advancement rewards at levels 2 through min(effective early cutoff, level_ceiling) + (10 if boss priority is off) + (10 if zone exploration is on) + (4 if quest checks are major_and_zone)`.
 
-The ten guardian checks are always present. The ten Tier 1/2 zone-entry checks and four Tier 2 zone-quest checks are optional. Major quests, paid shop parcels, later bosses/zones, and Victory are never early-safe. Shop, zone, and quest checks consume the fixed item/location budget and therefore change the number of advancement checks. Advancement rewards are allocated as evenly as possible over levels 2 through `level_ceiling`, up to 64 per level. `early_level_max` may be 3 through 20, so level 1 itself never supplies an advancement check. Generation increases the effective cutoff only when the chosen build needs more ToME early-safe checks to hold its own requested ranks. If too many slots are tied up in non-early shops and later checks, generation reports that no such cutoff can supply enough non-shop checks. A 100,000-build sweep across the allowed option ranges found level 3 sufficient for every valid current-profile build and found seeds where level 2 was insufficient.
+The ten guardian checks are always present and remain marked early-safe for progression items from other worlds, but default boss priority makes them unusable for ToME's early useful talents. The ten Tier 1/2 zone-entry checks and four Tier 2 zone-quest checks are optional. Major quests, paid shop parcels, later bosses/zones, and Victory do not contribute to this capacity. Shop, zone, and quest checks consume the fixed item/location budget and therefore change the number of advancement checks. Advancement rewards are allocated as evenly as possible over levels 2 through `level_ceiling`, up to 64 per level. `early_level_max` may be 3 through 20, so level 1 itself never supplies an advancement check. Generation increases the effective cutoff only when the chosen build needs more usable ToME checks for its requested ranks. If all advancement levels are exhausted, generation reports the shortage instead of treating priority bosses as available.
 
-Within the configured 20-level window, the location-ID ceiling is 19 × 64 + 24 = **1,240** early-safe locations. It is achievable with the current catalog: 20 class trees, 20 generic trees, 20 prodigies, no starter ranks, level ceiling/early maximum 20, shops off, zone and full quest checks on, and RNG seed 1869 produce exactly 1,216 early advancement checks plus 24 fixed checks.
+Within the configured 20-level window, the location-ID ceiling is 19 × 64 + 24 = **1,240** usable early-talent locations when boss priority is disabled. It is achievable with the current catalog: 20 class trees, 20 generic trees, 20 prodigies, no starter ranks, level ceiling/early maximum 20, shops off, zone and full quest checks on, boss priority off, and RNG seed 1869 produce exactly 1,216 early advancement checks plus 24 fixed checks. With boss priority on, the corresponding ceiling is **1,230**.
 
-| Build and options | Early requests | Early advancement | Early bosses | Early zones | Early quests | Total early-safe |
+| Build and options | Early requests | Early advancement | Usable bosses | Early zones | Early quests | Usable total |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| Default options, RNG seed 0 | 11 | 36 | 10 | 10 | 4 | 60 |
-| Constructed maximum request with default numeric options | 33 | 108 | 10 | 10 | 4 | 132 |
-| Constructed maximum request with maximum tree/prodigy counts, level ceiling 50 | 55 | 198 | 10 | 10 | 4 | 222 |
-| Maximum possible early-safe capacity, RNG seed 1869 and settings above | 30 | 1,216 | 10 | 10 | 4 | 1,240 |
-| Default seed 0, `early_level_max=3`, zone and quest checks off | 11 | 10 | 10 | 0 | 0 | 20 |
+| Default options, RNG seed 0, priority on | 11 | 36 | 0 | 10 | 4 | 50 |
+| Constructed maximum request with default numeric options, priority on | 33 | 108 | 0 | 10 | 4 | 122 |
+| Constructed maximum request with maximum tree/prodigy counts, level ceiling 50, priority on | 55 | 198 | 0 | 10 | 4 | 212 |
+| Maximum possible capacity, RNG seed 1869 and settings above, priority off | 30 | 1,216 | 10 | 10 | 4 | 1,240 |
+| Same maximum-capacity settings, priority on | 30 | 1,216 | 0 | 10 | 4 | 1,230 |
+| Default seed 0, `early_level_max=3`, zone and quest checks off, priority on | 11 | 15 | 0 | 0 | 0 | 15 |
+| Same tight seed, priority off | 11 | 10 | 10 | 0 | 0 | 20 |
 
-With all default options, ToME has **at least 51** early-safe locations for any valid generated build, which exceeds the 33-request maximum. The conservative lower bound uses the 1.7.6 catalog's six smallest class-tree item budgets (120 ranks), four smallest optional generic-tree budgets (75), mandatory Combat Training (35), 60 stat packages, and five prodigies, minus two starter ranks and at most 17 distinct one-rank external precollects. That leaves at least 276 shuffled items. After the 172 default fixed checks, at least 104 advancement checks remain; the even 39-level schedule gives at least 27 through level 10, plus 24 fixed early-safe checks.
+With all default options, ToME has **at least 41 usable early-talent locations** for any valid generated build, which exceeds the 33-request maximum. The conservative lower bound uses the 1.7.6 catalog's six smallest class-tree item budgets (120 ranks), four smallest optional generic-tree budgets (75), mandatory Combat Training (35), 60 stat packages, and five prodigies, minus two starter ranks and at most 17 distinct one-rank external precollects. That leaves at least 276 shuffled items. After the 172 default fixed checks, at least 104 advancement checks remain; the even 39-level schedule gives at least 27 through level 10, plus 14 usable fixed early checks. The ten priority bosses do not enter this bound.
 
-The previous minimum of 1 could leave only ten eligible ToME checks, fewer than this seed's eleven requests. The new minimum of 3 closes that case. The generation-side extension also protects unusual future catalog/option combinations by marking only as many later advancement levels early-safe as needed. Requests may still be fulfilled by other games' early locations in a multiworld. The actual count must be read from the generated spoiler/build because the item pool and advancement schedule change with the chosen trees and option settings.
+Level 3 alone can still be insufficient when boss priority is on: the tight seed above has ten usable advancement checks at level 3 for eleven requests, so generation extends its effective cutoff to level 4 and supplies fifteen. The generation-side extension marks only as many later advancement levels early-safe as needed. Requests may also be fulfilled by other games' early locations in a multiworld. The APWorld restricts requested names to ToME's early band only during Archipelago's early pass; after the requested copies are placed, remaining copies can fill later checks normally. The actual count must be read from the generated spoiler/build because the item pool and advancement schedule change with the chosen trees and option settings.
+
+Native Archipelago 0.6.7 fill regressions cover tight-window solo fills with boss priority both on and off, repeated Combat Accuracy copies, and a second game's reachable checks receiving requested ToME ranks. The tests assert that requested copies are placed in the early pass and that the remaining copies are legal at later ToME checks.
 
 ## Source of counts
 

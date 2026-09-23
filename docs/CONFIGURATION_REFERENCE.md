@@ -84,15 +84,15 @@ The current manifest contains 42 merchants. The values therefore produce 42, 84,
 - Range: 3–20
 - Default: 10
 
-Advancement locations at or below this level can hold another world's explicitly requested `early_items` / `local_early_items`. The generated seed extends the cutoff only if this ToME world's requested early ranks need more eligible checks. Level 1 has no advancement location. Curated T1/T2 boss, zone-entry, and zone-quest checks are independently marked early-safe.
+Advancement locations at or below this level can hold another world's explicitly requested `early_items` / `local_early_items`. The generated seed extends the cutoff only if this ToME world's requested early ranks need more usable checks. Level 1 has no advancement location. Curated T1/T2 boss, zone-entry, and zone-quest checks are independently marked early-safe.
 
-The minimum of 3 covers the tightest current-profile seeds found in a 100,000-build option sweep; level 2 was insufficient for some. The generation-side extension guarantees sufficient ToME early-safe locations for the actual build whenever enough non-shop checks exist. See [the capacity audit](EARLY_CHECK_AUDIT.md).
+With default boss priority, Archipelago's early pass cannot put useful ToME talents at the ten priority boss checks. Level 3 alone can therefore be insufficient; generation extends the actual early advancement window when needed. It rejects builds with too few usable checks at any level. See [the capacity audit](EARLY_CHECK_AUDIT.md).
 
 ### `t1_t2_boss_priority`
 
 - `true` (default) / `false`
 
-The ten standard T1/T2 guardian locations always exist. When enabled, they are marked Archipelago `PRIORITY`; when disabled they are ordinary locations. Their early-safe status does not depend on this option.
+The ten standard T1/T2 guardian locations always exist. When enabled, they are marked Archipelago `PRIORITY`; when disabled they are ordinary locations. They remain early-safe for progression items in either mode, but only ordinary boss checks can receive useful ToME talents during Archipelago's early-item pass.
 
 ## Unsupported inherited common options
 

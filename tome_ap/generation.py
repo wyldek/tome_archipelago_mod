@@ -399,7 +399,9 @@ def create_build(catalog: Catalog, settings: Settings, rng: Random) -> Build:
     # A short early window can leave fewer ToME locations than the ranks this
     # world requests from AP's multiworld early pool. Extend only as far as the
     # generated level schedule requires; keep every requested rank paid.
-    early_fixed = sum(p.early for p in primary_locations)
+    # AP 0.6.7 excludes PRIORITY locations while placing early useful items.
+    # Talent ranks are useful, so priority bosses cannot satisfy these requests.
+    early_fixed = sum(p.early and p.placement == "default" for p in primary_locations)
     effective_early_level_max = settings.early_level_max
     early_slots = early_fixed + sum(
         count for level, count in schedule.items() if level <= effective_early_level_max
@@ -414,9 +416,9 @@ def create_build(catalog: Catalog, settings: Settings, rng: Random) -> Build:
                 break
     if early_slots < len(early_talents):
         raise ValidationError(
-            f"Only {early_slots} non-shop ToME checks can hold "
+            f"Only {early_slots} early-useful ToME checks can hold "
             f"{len(early_talents)} requested early talent ranks; "
-            "reduce shop checks or increase the build size"
+            "reduce shop checks, disable boss priority, or increase the build size"
         )
     locations = [
         LocationDef(

@@ -107,7 +107,7 @@ The always-present boss checks are:
 - Reknor: Golbug the Destroyer
 - Rak'Shor Pride, Vor Pride, Gorbat Pride, and Grushnak Pride leaders
 
-The ten T1/T2 guardian locations are early-safe. With `t1_t2_boss_priority: true` they are also Archipelago `PRIORITY` locations.
+The ten T1/T2 guardian locations are early-safe. With `t1_t2_boss_priority: true` they are also Archipelago `PRIORITY` locations, which Archipelago's early pass cannot use for useful ToME talent ranks.
 
 ### Zone-entry check manifest
 

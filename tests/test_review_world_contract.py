@@ -197,3 +197,24 @@ def test_repeated_anchor_requests_two_multiworld_early_ranks(world):
     instance.generate_early()
     assert instance.multiworld.early_items[instance.player][name] == 2
     assert instance.multiworld.local_early_items[instance.player][name] == 0
+
+
+def test_only_selected_early_copies_are_restricted_during_fill(world):
+    instance, namespace = world
+    key = next(key for key, item in namespace["CATALOG"].items.items() if item.kind == "talent")
+    name = namespace["CATALOG"].items[key].name
+    instance.build.early_talents = [key, key]
+    instance.multiworld.early_items[1][name] = 2
+    late = next(instance.get_location(loc.name) for loc in instance.build.locations
+                if not loc.early and loc.event == "level")
+    early = [instance.get_location(loc.name) for loc in instance.build.locations
+             if loc.early and loc.placement == "default"]
+    copies = [instance.create_item(name) for _ in range(3)]
+    instance.multiworld.itempool.extend(copies)
+    assert not late.item_rule(copies[2])
+    with pytest.raises(RuntimeError, match="could not be placed"):
+        instance.fill_hook([], [], [], [])
+    for location, item in zip(early, copies):
+        location.place_locked_item(item)
+    instance.fill_hook([], [], [], [])
+    assert late.item_rule(copies[2])

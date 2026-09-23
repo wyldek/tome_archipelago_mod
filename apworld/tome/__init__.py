@@ -128,15 +128,14 @@ class ToMEWorld(World):
         # This event represents modeled reachability, NOT live server victory.
         # CLIENT_GOAL is still sent only after native campaign victory.
 
-        # AP's generic early-item distributor considers every logically reachable
-        # location. Unrestricted ToME intentionally has very light access logic,
-        # so explicitly requested early items need a physical-pacing guard: only
-        # configured early-level rewards and curated T1/T2 exploration/quest/boss checks may
-        # contain them. This applies to early items belonging to any world.
+        # AP's early distributor considers every logically reachable location.
+        # Restrict requested items only during that pass: after AP selects the
+        # requested copies, the remaining copies must be legal at later checks.
+        self._early_rules_active = True
         def explicitly_requested_early(item):
             return bool(
-                self.multiworld.early_items[item.player].get(item.name, 0)
-                or self.multiworld.local_early_items[item.player].get(item.name, 0)
+                self.multiworld.early_items.get(item.player, {}).get(item.name, 0)
+                or self.multiworld.local_early_items.get(item.player, {}).get(item.name, 0)
             )
 
         for loc_def in self.build.locations:
@@ -148,8 +147,26 @@ class ToMEWorld(World):
             if not loc_def.early:
                 add_item_rule(
                     location,
-                    lambda item: not explicitly_requested_early(item),
+                    lambda item: not self._early_rules_active or not explicitly_requested_early(item),
                 )
+
+    def fill_hook(self, progitempool, usefulitempool, filleritempool, fill_locations):
+        # Called immediately after AP's early pass and before normal fill. AP
+        # only reports an unfulfilled early request as a warning, so fail the
+        # seed rather than silently putting a bootstrap rank late.
+        requested = Counter(CATALOG.items[key].name for key in self.build.early_talents)
+        placed = {}
+        for item in self.multiworld.itempool:
+            if item.player == self.player and item.location is not None:
+                placed.setdefault(item.name, []).append(item)
+        missing = requested - Counter({name: len(items) for name, items in placed.items()})
+        if missing:
+            raise RuntimeError(f"ToME early talent ranks could not be placed: {dict(missing)}")
+        self._early_placed_ranks = {
+            name: tuple(placed[name][:count]) for name, count in requested.items()
+        }
+        self._early_rules_active = False
+
     def fill_slot_data(self):
         return self.build.contract(CATALOG)
 
@@ -168,7 +185,8 @@ class ToMEWorld(World):
         if self.build.early_talents:
             spoiler_handle.write("Early talent ranks: " + ", ".join(self.build.early_talents) + "\n")
         spoiler_handle.write(
-            f"Early-safe ToME checks: {sum(loc.early for loc in self.build.locations)} "
+            f"Early-safe ToME talent checks: "
+            f"{sum(loc.early and loc.placement == 'default' for loc in self.build.locations)} "
             f"for {len(self.build.early_talents)} requested early ranks\n"
         )
         spoiler_handle.write("Prodigies: " + ", ".join(self.build.prodigies) + "\n")
