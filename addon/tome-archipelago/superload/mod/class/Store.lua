@@ -34,6 +34,7 @@ local function parcelObject(loc,actor)
   o.archipelago_parcel_index=p.parcel
   o.archipelago_item_name=scout.item_name
   o.archipelago_recipient=scout.player_name
+  o.archipelago_zone=p.zone
   return o
 end
 
@@ -72,6 +73,10 @@ function _M:doBuy(who,o,item,nb,store_dialog,...)
     return old_doBuy(self,who,o,item,nb,store_dialog,...)
   end
   local price=o.archipelago_price
+  if not AP.shopPurchaseAvailable(who,o.archipelago_location) then
+    Dialog:simplePopup("Archipelago item unavailable","This item has already been checked or is no longer available.")
+    return
+  end
   if (who.money or 0)<price then
     Dialog:simplePopup("Not enough gold","You do not have enough gold!")
     return
@@ -79,19 +84,27 @@ function _M:doBuy(who,o,item,nb,store_dialog,...)
   Dialog:yesnoPopup("Buy Archipelago Item",
     ("Buy %s for %d gold?"):format(o:getName{do_color=true,no_count=true},price),
     function(ok) if ok then
+      local inven=self:getInven("INVEN") or {}
+      local parcel_index
+      for i,entry in ipairs(inven) do if entry==o then parcel_index=i break end end
+      if not parcel_index or current_zone_key()~=o.archipelago_zone or
+        not AP.shopPurchaseAvailable(who,o.archipelago_location) then
+        Dialog:simplePopup("Archipelago item unavailable","This item has already been checked or is no longer available.")
+        if store_dialog then store_dialog:updateStore() end
+        return
+      end
       if (who.money or 0)<price then
         Dialog:simplePopup("Not enough gold","You do not have enough gold!")
         return
       end
       who:incMoney(-price)
-      local inven=self:getInven("INVEN")
-      if inven[item]==o then table.remove(inven,item) else
-        for i=#inven,1,-1 do if inven[i]==o then table.remove(inven,i) break end end
+      if not AP.recordShopPurchase(who,o.archipelago_location) then
+        who:incMoney(price)
+        return
       end
-      if AP.recordShopPurchase(who,o.archipelago_location) then
-        game.log("#LIGHT_BLUE#[Archipelago]#LAST# Purchased %s for %d gold.",o.archipelago_item_name,price)
-        pcall(AP.publish,who)
-      end
+      table.remove(inven,parcel_index)
+      game.log("#LIGHT_BLUE#[Archipelago]#LAST# Purchased %s for %d gold.",o.archipelago_item_name,price)
+      pcall(AP.publish,who)
       if store_dialog then store_dialog:updateStore() end
     end end,
     "Buy","Cancel")

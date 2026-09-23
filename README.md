@@ -55,7 +55,7 @@ Prodigies can add additional AP-managed categories. Reviewed dependencies can ad
 Precollected ranks are real AP items but are removed from the shuffled pool before placement:
 
 - `starting_ranks` precollects 0–2 likely offensive starter ranks. Starter selection is a metadata heuristic, not a guarantee that every equipment/resource combination is immediately usable. With the default value of 2, both ranks normally go into the same starter talent when its cap permits it; otherwise a second starter can be used.
-- Dependency protection may precollect an enabling rank from a support category or an anchor rank from the selected category itself. Functional requirements reuse an already-rolled provider when possible and only add the reviewed fallback tree when necessary. Remaining ranks are normal shuffled items.
+- Dependency protection precollects enabling ranks from external support categories. Functional requirements reuse an already-rolled provider when possible and only add the reviewed fallback tree when necessary. Same-tree anchor ranks remain paid shuffled items; the reviewed number of ranks is requested through Archipelago's multiworld early-item pool.
 
 The item pool is therefore based on the exact runtime catalog:
 
@@ -67,7 +67,7 @@ all rank copies in selected random trees
 + 10 x each of the six +5 stat packages
 + selected prodigies
 - precollected starter ranks
-- precollected dependency/anchor ranks
+- precollected external dependency ranks
 = shuffled ToME items
 = active ToME locations
 ```

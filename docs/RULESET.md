@@ -25,11 +25,11 @@ Catalog schema 4 separates three dependency concepts so randomized categories do
 
 - **Exact support dependencies** require one specific category/talent, such as Psiblades for blade categories that directly depend on it.
 - **Functional capabilities** describe a mechanic rather than a specific class pairing. A dependent tree first reuses a provider that was already rolled and available at birth; if none exists, the reviewed fallback provider becomes a support category. The provider's enabling rank is precollected once. Examples include Shadows, summon creation, combo generation, a bindable Chronomancy spell, alchemist-gem creation, Insanity generation, entropic backlash, undead minions, and an Alchemist Golem.
-- **Anchor talents** are same-tree bootstraps. One rank of the tree's core mechanic is precollected so later ranks are not received before the mechanic they operate on, for example Call Shadows, Temporal Hounds, Prophecy, Thought-Forms, or Golem Power.
+- **Anchor talents** are same-tree bootstraps. Their reviewed number of paid ranks stays in the shuffled pool and is requested through Archipelago's multiworld `early_items` pool, for example Call Shadows, Temporal Hounds, Prophecy, Thought-Forms, or Golem Power. Combat Training requests two ranks each of four weapon skills. They may be placed in another player's early checks. External hard dependencies and normal starter ranks count toward the requested quantity. Early placement improves pacing but does not force those ranks to be the first talents received from their tree.
 
 Support categories do not consume the configured random class/generic counts. Their remaining ranks are ordinary shuffled items. Dependency resolution is transitive and duplicate free ranks collapse to one copy. If a prodigy-gated category is the only apparent provider, it does not count as ready at birth; the resolver uses/promotes a provider that is actually available when the dependent tree is available.
 
-The dependency policy is generation-time metadata only. Capability names and anchor rules are resolved into the existing `support_trees` and `support_precollects` contract fields, so contract schema 3, mailbox protocol 1, and save schema 3 remain unchanged. Existing generated seeds are not retroactively rewritten.
+The dependency policy is generation-time metadata only. Exact and functional support rules resolve into the existing `support_trees` and `support_precollects` contract fields. Anchor rules request multiworld early item placement without changing the contract. Contract schema 3, mailbox protocol 1, and save schema 3 remain unchanged. Existing generated seeds are not retroactively rewritten.
 
 This protection targets missing mechanics/talents, not ordinary gear conditions such as needing a shield, bow, staff, steamgun, steamsaw, or two-handed weapon.
 
@@ -50,7 +50,7 @@ all rank copies from random class categories
 + 10 copies of each of six named +5 stat packages
 + selected prodigies
 - precollected starter ranks
-- precollected dependency/anchor ranks
+- precollected external dependency ranks
 = shuffled AP items
 = active AP locations
 ```

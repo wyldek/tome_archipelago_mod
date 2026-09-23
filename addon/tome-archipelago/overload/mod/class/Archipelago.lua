@@ -693,9 +693,74 @@ function M.recordShopPurchase(actor,code)
   if not s or not whole(code,1,2147483647) then return false end
   local key=tostring(code)
   local loc=s.locations[key]
-  if not loc or loc.event~="shop" then return false end
+  if not loc or loc.event~="shop" or s.checks[key] then return false end
   s.checks[key]=true
   return true
+end
+
+function M.shopPurchaseAvailable(actor,code)
+  local s=actor and actor.archipelago_state
+  if not s or not whole(code,1,2147483647) then return false end
+  local key=tostring(code)
+  local loc=s.locations[key]
+  return loc and loc.event=="shop" and not s.checks[key] and s.scouts and s.scouts[key]~=nil or false
+end
+
+-- Pool talents remain learned for native game mechanics. Show a resource once
+-- a learned skill actually uses it, including racial and inscription talents.
+local function usedResources(actor,definitions)
+  local used={}
+  for tid,rank in pairs(actor.talents or {}) do
+    if type(rank)=="number" and rank>0 then
+      local talent=actor:getTalentFromId(tid)
+      if talent then
+        for _,r in ipairs(definitions or {}) do
+          local short=r.short_name
+          if rawget(talent,short)~=nil or rawget(talent,"sustain_"..short)~=nil or
+            rawget(talent,"drain_"..short)~=nil then used[short]=true end
+        end
+        if rawget(talent,"feedback")~=nil or rawget(talent,"sustain_feedback")~=nil then
+          used.feedback=true
+        end
+        local tree=talent.type and talent.type[1]
+        if type(tree)=="string" and
+          (tree:match("^psionic/feedback") or tree:match("^psionic/discharge")) then used.feedback=true end
+      end
+    end
+  end
+  return used
+end
+
+function M.resourceVisible(actor,short)
+  if not M.isCharacter(actor) or not actor.archipelago_state then return true end
+  local R=require "engine.interface.ActorResource"
+  return usedResources(actor,R.resources_def)[short] or false
+end
+
+function M.withResourceDisplay(actor,fn,...)
+  if not M.isCharacter(actor) or not actor.archipelago_state then return fn(...) end
+  local R=require "engine.interface.ActorResource"
+  local used=usedResources(actor,R.resources_def)
+  local hidden={}
+  for _,r in ipairs(R.resources_def or {}) do
+    if type(r.talent)=="string" and not used[r.short_name] then
+      hidden[r.talent]=true
+    end
+  end
+  if actor.T_FEEDBACK_POOL and not used.feedback then
+    hidden[actor.T_FEEDBACK_POOL]=true
+  end
+  local original=rawget(actor,"knowTalent")
+  local native=actor.knowTalent
+  actor.knowTalent=function(self,tid,...)
+    if hidden[tid] then return false end
+    return native(self,tid,...)
+  end
+  local args=pack(...)
+  local ok,result=pcall(function() return pack(fn(unpack(args,1,args.n))) end)
+  actor.knowTalent=original
+  if not ok then error(result,0) end
+  return unpack(result,1,result.n)
 end
 
 function M.markVictory(actor)
@@ -758,6 +823,11 @@ function M.poll(g)
     local s=assert(actor.archipelago_state)
     if not M.identityMatches(s.identity,snap.identity) then error("Save belongs to a different AP seed/team/slot/build") end
     s.scouts=scout_map(snap,s.locations)
+    -- A restored save may predate checks already accepted by the AP server.
+    for _,code in ipairs(snap.checked_locations or {}) do
+      local key=tostring(code)
+      if s.locations[key] then s.checks[key]=true end
+    end
     if s.error then return end
     migrateResourceState(actor,s)
     M.recordZone(actor,g.zone)

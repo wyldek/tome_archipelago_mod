@@ -24,10 +24,10 @@ Current reviewed capabilities cover Shadows, summon creation, bindable Chronoman
 
 ## Anchor talents
 
-`anchor_talents` handles same-tree bootstraps. If a selected tree's later talents assume its core mechanic already exists, one rank of that core talent is precollected and removed from the shuffled pool. Examples include Call Shadows, Temporal Hounds, Thought-Forms, Prophecy, Golem Power, and several Demented state-machine talents.
+`anchor_talents` handles same-tree bootstraps. Each occurrence of a talent symbol requests one paid rank through Archipelago's multiworld `early_items` pool; repeating a symbol requests multiple ranks. A request may be filled at another player's early check. External dependency and normal starter ranks count toward the requested quantity, so only the remaining paid ranks are requested. Examples include Call Shadows, Temporal Hounds, Thought-Forms, Prophecy, Golem Power, and the two early ranks of each Combat Training mastery. See [the early-check capacity audit](EARLY_CHECK_AUDIT.md).
 
 ## Compatibility boundary
 
-These fields exist only in catalog schema 4. They are fully resolved before slot data is emitted. The generated contract still uses schema 3 fields (`support_trees`, `support_precollects`, concrete tree definitions, and the exact item/location multiset). Mailbox protocol 1 and character-state schema 3 are unchanged.
+These fields exist only in catalog schema 4. External requirements resolve before slot data is emitted; anchor requests affect Archipelago placement. The generated contract still uses schema 3 fields (`support_trees`, `support_precollects`, concrete tree definitions, and the exact item/location multiset). Mailbox protocol 1 and character-state schema 3 are unchanged.
 
 An old generated seed therefore remains playable with newer runtime code, but it is not retroactively repaired. A new catalog-v4 seed may have different support trees, precollected ranks, item count, location count, catalog hash, and contract hash even when using the same YAML and numeric RNG seed as an older release.

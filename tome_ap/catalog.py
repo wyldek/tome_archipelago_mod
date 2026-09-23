@@ -5,6 +5,7 @@ player subclasses.  A small reviewed profile only expresses AP-specific policy:
 mandatory trees, deliberate exclusions, and prodigy -> bonus-tree behavior.
 """
 from __future__ import annotations
+from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 import json
@@ -292,7 +293,7 @@ class Catalog:
                 raise ValidationError(f"Invalid/duplicate anchor rule {anchor.source_tree}")
             if not anchor.required_talents:
                 raise ValidationError(f"Anchor rule has no talent: {anchor.source_tree}")
-            for sym in anchor.required_talents:
+            for sym, count in Counter(anchor.required_talents).items():
                 if not SYMBOL.fullmatch(sym):
                     raise ValidationError(f"Invalid anchor talent symbol: {sym}")
                 item = self.items.get("talent:" + sym)
@@ -300,6 +301,11 @@ class Catalog:
                     raise ValidationError(
                         f"Anchor {anchor.source_tree} requires {sym}, "
                         "but the talent is not owned by that tree"
+                    )
+                if count > item.cap:
+                    raise ValidationError(
+                        f"Anchor {anchor.source_tree} requests {count} ranks of {sym}, "
+                        f"but only {item.cap} are in the pool"
                     )
             self.anchor_talents[anchor.source_tree] = anchor.required_talents
 
@@ -578,10 +584,16 @@ def compile_catalog(export: dict[str, Any], profile: dict[str, Any]) -> Catalog:
         if not isinstance(symbols, list) or not symbols:
             raise ValidationError(f"Anchor talent list expected for {source_tree}")
         owner_symbols = set(available[source_tree].get("symbols", []))
-        for sym in symbols:
+        for sym, count in Counter(symbols).items():
             if sym not in owner_symbols:
                 raise ValidationError(
                     f"Anchor {source_tree} requires {sym}, but the runtime tree does not contain it"
+                )
+            item = next((i for i in item_defs if i["key"] == "talent:" + sym), None)
+            if item and count > item["cap"]:
+                raise ValidationError(
+                    f"Anchor {source_tree} requests {count} ranks of {sym}, "
+                    f"but only {item['cap']} are in the pool"
                 )
         anchor_rules.append(AnchorRule(
             source_tree=source_tree, required_talents=tuple(symbols),

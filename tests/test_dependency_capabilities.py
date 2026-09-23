@@ -77,15 +77,24 @@ def test_bonus_only_provider_is_promoted_to_support_before_it_counts_as_ready():
     assert "talent:" + preferred_talent not in precollects
 
 
-def test_anchor_precollects_once_and_does_not_add_a_tree():
+def test_anchor_stays_paid_and_does_not_add_a_tree():
     export, profile, source, preferred, fallback, anchor, preferred_talent, fallback_talent, anchor_talent = _profile_with_capabilities()
     catalog = compile_catalog(export, profile)
     support, precollects = _resolve_support_dependencies(catalog, [anchor], [anchor])
     assert support == []
-    assert precollects == ["talent:" + anchor_talent]
+    assert precollects == []
+    build = create_build(
+        catalog,
+        Settings(class_tree_count=4, generic_tree_count=0, prodigy_count=0,
+                 starting_ranks=0, zone_exploration_checks=False,
+                 quest_checks="none", shop_checks="off"),
+        Random(1),
+    )
+    assert "talent:" + anchor_talent in build.early_talents
+    assert build.pool.count("talent:" + anchor_talent) == catalog.items["talent:" + anchor_talent].cap
 
 
-def test_anchor_and_capability_precollect_dedupe_same_talent():
+def test_external_capability_precollect_replaces_early_anchor_request():
     export, profile = fixture_export(classes=2, generics=0)
     source = "fixture/class-0"
     provider = "fixture/class-1"
@@ -103,6 +112,55 @@ def test_anchor_and_capability_precollect_dedupe_same_talent():
     support, precollects = _resolve_support_dependencies(catalog, [source], [source])
     assert support == [provider]
     assert precollects == ["talent:" + talent]
+    build = create_build(
+        catalog,
+        Settings(class_tree_count=2, generic_tree_count=0, prodigy_count=0,
+                 starting_ranks=0, zone_exploration_checks=False,
+                 quest_checks="none", shop_checks="off"),
+        Random(1),
+    )
+    assert "talent:" + talent not in build.early_talents
+
+
+def test_normal_starter_rank_does_not_request_an_extra_early_anchor():
+    export, profile = fixture_export(classes=1, generics=0)
+    tree = "fixture/class-0"
+    talent = next(t["symbols"][0] for t in export["trees"] if t["key"] == tree)
+    profile["anchor_talents"] = {tree: [talent]}
+    catalog = compile_catalog(export, profile)
+    build = create_build(
+        catalog,
+        Settings(class_tree_count=1, generic_tree_count=0, prodigy_count=0,
+                 starting_ranks=1, zone_exploration_checks=False,
+                 quest_checks="none", shop_checks="off"),
+        Random(1),
+    )
+    assert build.starters == ["talent:" + talent]
+    assert "talent:" + talent not in build.early_talents
+
+
+def test_two_early_ranks_count_paid_copies_and_existing_starter():
+    export, profile = fixture_export(classes=1, generics=0)
+    combat = "technique/combat-training"
+    combat_talent = next(t["symbols"][0] for t in export["trees"] if t["key"] == combat)
+    class_talent = next(t["symbols"][0] for t in export["trees"] if t["key"] == "fixture/class-0")
+    profile["anchor_talents"] = {
+        combat: [combat_talent, combat_talent],
+        "fixture/class-0": [class_talent, class_talent],
+    }
+    catalog = compile_catalog(export, profile)
+    build = create_build(
+        catalog,
+        Settings(class_tree_count=1, generic_tree_count=0, prodigy_count=0,
+                 starting_ranks=1, zone_exploration_checks=False,
+                 quest_checks="none", shop_checks="off"),
+        Random(1),
+    )
+    assert build.starters == ["talent:" + class_talent]
+    assert build.early_talents.count("talent:" + combat_talent) == 2
+    assert build.early_talents.count("talent:" + class_talent) == 1
+    assert build.pool.count("talent:" + combat_talent) == 5
+    assert build.pool.count("talent:" + class_talent) == 4
 
 
 def test_capability_requires_exactly_one_fallback():

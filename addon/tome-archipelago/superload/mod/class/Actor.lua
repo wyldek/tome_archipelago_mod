@@ -1,6 +1,19 @@
 local _M=loadPrevious(...)
 local AP=require "mod.class.Archipelago"
 local function pack(...)return {n=select("#",...),...}end
+-- Finger of Death attempts an optional body capture through Possess even when
+-- neither talent belongs to the AP build.  Without Bodies Reserve, ToME's
+-- hasRoom helper dereferences missing body storage.  Skip only that capture.
+local old_call_talent=_M.callTalent
+if type(old_call_talent)=="function" then
+  function _M:callTalent(tid,method,...)
+    if AP.isCharacter(self) and tid==self.T_POSSESS and method=="absorbCheck" and
+       (self:getTalentLevelRaw(self.T_POSSESS)<1 or self:getTalentLevelRaw(self.T_BODIES_RESERVE)<1) then
+      return nil
+    end
+    return old_call_talent(self,tid,method,...)
+  end
+end
 -- Archipelago characters may mix antimagic and arcane talent families.  ToME's
 -- vanilla power-source identity flags are primarily compatibility gates: antimagic
 -- talents add forbid_arcane, while spells add has_arcane_knowledge.  Suppress both

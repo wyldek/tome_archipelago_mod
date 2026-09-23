@@ -76,6 +76,30 @@
     }
   },
   "support_dependencies": {
+    "technique/assassination": [
+      {
+        "tree": "cunning/stealth",
+        "talents": [
+          "T_STEALTH"
+        ]
+      }
+    ],
+    "psionic/possession": [
+      {
+        "tree": "psionic/body-snatcher",
+        "talents": [
+          "T_BODIES_RESERVE"
+        ]
+      }
+    ],
+    "psionic/body-snatcher": [
+      {
+        "tree": "psionic/possession",
+        "talents": [
+          "T_POSSESS"
+        ]
+      }
+    ],
     "wild-gift/corrosive-blades": [
       {
         "tree": "wild-gift/mindstar-mastery",
@@ -363,6 +387,9 @@
     "technique/finishing-moves": [
       "combo_source"
     ],
+    "technique/unarmed-discipline": [
+      "combo_source"
+    ],
     "spell/explosives": [
       "alchemist_gem_source"
     ],
@@ -380,11 +407,36 @@
     ]
   },
   "anchor_talents": {
+    "technique/combat-training": [
+      "T_WEAPON_COMBAT",
+      "T_WEAPON_COMBAT",
+      "T_WEAPONS_MASTERY",
+      "T_WEAPONS_MASTERY",
+      "T_KNIFE_MASTERY",
+      "T_KNIFE_MASTERY",
+      "T_EXOTIC_WEAPONS_MASTERY",
+      "T_EXOTIC_WEAPONS_MASTERY"
+    ],
+    "spell/thaumaturgy": [
+      "T_ELEMENTAL_ARRAY_BURST"
+    ],
+    "psionic/dreaming": [
+      "T_SLEEP"
+    ],
+    "psionic/nightmare": [
+      "T_NIGHTMARE"
+    ],
+    "cunning/stealth": [
+      "T_STEALTH"
+    ],
     "cursed/shadows": [
       "T_CALL_SHADOWS"
     ],
     "chronomancy/temporal-hounds": [
       "T_TEMPORAL_HOUNDS"
+    ],
+    "chronomancy/spacetime-folding": [
+      "T_WARP_MINES"
     ],
     "psionic/thought-forms": [
       "T_THOUGHT_FORMS"
@@ -403,6 +455,12 @@
     ],
     "spell/dreadmaster": [
       "T_DREAD"
+    ],
+    "spell/eradication": [
+      "T_BONEYARD"
+    ],
+    "wild-gift/ooze": [
+      "T_MITOSIS"
     ],
     "demented/doom": [
       "T_PROPHECY"
@@ -433,6 +491,169 @@
     ],
     "demented/entropy": [
       "T_ENTROPIC_GIFT"
+    ],
+    "celestial/chants": [
+      "T_CHANT_ACOLYTE"
+    ],
+    "celestial/dirge": [
+      "T_DIRGE_ACOLYTE"
+    ],
+    "celestial/glyphs": [
+      "T_GLYPHS"
+    ],
+    "celestial/hymns": [
+      "T_HYMN_ACOLYTE"
+    ],
+    "chronomancy/fate-weaving": [
+      "T_SPIN_FATE"
+    ],
+    "chronomancy/flux": [
+      "T_ATTENUATE"
+    ],
+    "corruption/demonic-pact": [
+      "T_DEMON_SEED"
+    ],
+    "corruption/doom-covenant": [
+      "T_DARK_REIGN",
+      "T_DREAD_END",
+      "T_BLOOD_PACT"
+    ],
+    "cunning/artifice": [
+      "T_ROGUE_S_TOOLS"
+    ],
+    "cunning/poisons": [
+      "T_APPLY_POISON"
+    ],
+    "cunning/trapping": [
+      "T_TRAP_MASTERY"
+    ],
+    "cursed/dark-sustenance": [
+      "T_FEED"
+    ],
+    "cursed/endless-hunt": [
+      "T_STALK"
+    ],
+    "cursed/fears": [
+      "T_INSTILL_FEAR"
+    ],
+    "cursed/gestures": [
+      "T_GESTURE_OF_PAIN"
+    ],
+    "cursed/gloom": [
+      "T_GLOOM"
+    ],
+    "cursed/predator": [
+      "T_SAVAGE_HUNTER"
+    ],
+    "cursed/rampage": [
+      "T_RAMPAGE"
+    ],
+    "demented/beyond-sanity": [
+      "T_CHAOS_ORBS"
+    ],
+    "demented/horrific-body": [
+      "T_PUSTULENT_GROWTH",
+      "T_PUSTULENT_FULMINATION"
+    ],
+    "demented/oblivion": [
+      "T_NIHIL"
+    ],
+    "psionic/body-snatcher": [
+      "T_BODIES_RESERVE"
+    ],
+    "psionic/dream-forge": [
+      "T_FORGE_SHIELD"
+    ],
+    "psionic/gestalt": [
+      "T_GESTALT"
+    ],
+    "psionic/possession": [
+      "T_POSSESS"
+    ],
+    "psionic/psionic-menace": [
+      "T_GHASTLY_WAIL"
+    ],
+    "psionic/ravenous-mind": [
+      "T_SADIST"
+    ],
+    "psionic/slumber": [
+      "T_SLUMBER"
+    ],
+    "spell/age-of-dusk": [
+      "T_DIRE_PLAGUE"
+    ],
+    "spell/deeprock": [
+      "T_DEEPROCK_FORM"
+    ],
+    "spell/eldritch-stone": [
+      "T_STONE_SPIKES"
+    ],
+    "spell/galvanic-technomancy": [
+      "T_GALVANIC_ROD",
+      "T_GALVANIC_ARCING"
+    ],
+    "spell/glacial-waste": [
+      "T_HIEMAL_SHIELD"
+    ],
+    "spell/master-necromancer": [
+      "T_NECROTIC_AURA"
+    ],
+    "spell/necrosis": [
+      "T_BLURRED_MORTALITY"
+    ],
+    "spell/occult-technomancy": [
+      "T_METATEMPORAL_SPINNER",
+      "T_REALITY_BREACH"
+    ],
+    "spell/rime-wraith": [
+      "T_RIME_WRAITH"
+    ],
+    "spell/spectre": [
+      "T_GHOST_WALK"
+    ],
+    "spell/terrene-technomancy": [
+      "T_MICRO_SPIDERBOT"
+    ],
+    "spell/wildfire": [
+      "T_BURNING_WAKE"
+    ],
+    "steamtech/chemical-warfare": [
+      "T_MIASMA_ENGINE"
+    ],
+    "steamtech/demolition": [
+      "T_GRENADE_LAUNCHER"
+    ],
+    "steamtech/elusiveness": [
+      "T_AWESOME_TOSS"
+    ],
+    "steamtech/furnace": [
+      "T_FURNACE",
+      "T_MOLTEN_METAL"
+    ],
+    "steamtech/heavy-weapons": [
+      "T_HEAVY_WEAPONS"
+    ],
+    "steamtech/mecharachnid": [
+      "T_MECHARACHNID"
+    ],
+    "steamtech/mechstar": [
+      "T_METALSTAR",
+      "T_BLOODSTAR"
+    ],
+    "steamtech/turrets": [
+      "T_DEPLOY_TURRET"
+    ],
+    "technique/grappling": [
+      "T_CLINCH"
+    ],
+    "wild-gift/earthen-vines": [
+      "T_STONE_VINES"
+    ],
+    "wild-gift/mucus": [
+      "T_MUCUS"
+    ],
+    "wild-gift/summon-advanced": [
+      "T_MASTER_SUMMONER"
     ]
   }
 }

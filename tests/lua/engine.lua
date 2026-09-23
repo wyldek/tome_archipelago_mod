@@ -11,7 +11,7 @@ function fs.open(path,mode)
     close=function(self)end
   }
 end
-actor={archipelago_character=true,level=1,stats={12,12,12,12,12,12},raw={},definitions={},
+actor={archipelago_character=true,level=1,stats={12,12,12,12,12,12},raw={},talents={},definitions={},
        unused_talents=5,unused_generics=3,unused_stats=9,unused_talents_types=1,unused_prodigies=0,
        STAT_STR=1,STAT_DEX=2,STAT_CON=3,STAT_MAG=4,STAT_WIL=5,STAT_CUN=6,
        max_life=100,life=100,talents_types={},talents_types_mastery={},category_learns=0}
@@ -50,6 +50,7 @@ function actor:getTalentLevelRaw(tid)return self.raw[tid] or 0 end
 function actor:learnTalent(tid,force,nb)
   assert(force==true,"requirements must be bypassed")
   self.raw[tid]=(self.raw[tid] or 0)+nb
+  self.talents[tid]=self.raw[tid]
   self.unused_talents=self.unused_talents-nb
   local t=self.definitions[tid]
   if t and t.on_learn then t.on_learn(self,t) end
@@ -60,7 +61,10 @@ function actor:learnTalentType(tree,known)
 end
 function actor:knowTalentType(tree)return self.talents_types[tree]end
 function actor:incStat(id,n)self.stats[id]=self.stats[id]+n end
-function actor:unlearnTalent(id)self.raw[id]=math.max(0,(self.raw[id] or 0)-1)end
+function actor:unlearnTalent(id)
+  self.raw[id]=math.max(0,(self.raw[id] or 0)-1)
+  self.talents[id]=self.raw[id]>0 and self.raw[id] or nil
+end
 game={player=actor,level={},log=function(...)end}
 fs.files["/archipelago/client.json"]=JSON.encode(snapshot)
 function publish_snapshot()

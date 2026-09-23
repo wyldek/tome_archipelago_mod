@@ -63,9 +63,9 @@ class ShopChecksPerStore(Range):
     default = 3
 
 class EarlyLevelMax(Range):
-    """Highest advancement level whose level-up checks may hold another world's explicitly requested early item. Level 1 has no advancement check."""
-    display_name = "Early Level Check Maximum"
-    range_start = 1
+    """Minimum early-safe advancement cutoff. Generation extends it only if needed to fit this ToME world's early-rank requests. Level 1 has no advancement check."""
+    display_name = "Early Level Check Minimum"
+    range_start = 3
     range_end = 20
     default = 10
 

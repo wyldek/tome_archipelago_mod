@@ -91,6 +91,7 @@ def add_rule(location, rule):
 def world():
     catalog = fixture_catalog()
     namespace = dict(CATALOG=catalog, GAME=GAME, Settings=Settings, create_build=create_build,
+                     Counter=Counter,
                      LEVEL_ID_STRIDE=LEVEL_ID_STRIDE, level_location_id=level_location_id,
                      PRIMARY_NAME_TO_ID=PRIMARY_NAME_TO_ID, Item=ItemDouble, Location=LocationDouble,
                      Region=RegionDouble, World=WorldDouble, ItemClassification=Classification,
@@ -155,3 +156,44 @@ def test_all_shuffled_rewards_remain_non_progression_and_shops_reject_foreign_pr
     for location in instance.build.locations:
         if location.event == "shop":
             assert not instance.get_location(location.name).item_rule(foreign)
+
+
+def test_same_tree_anchor_requests_one_paid_multiworld_early_rank(world):
+    instance, namespace = world
+    catalog = namespace["CATALOG"]
+    key = next(key for key, item in catalog.items.items() if item.kind == "talent")
+    name = catalog.items[key].name
+    defaults = Settings()
+    values = vars(defaults).copy()
+    values["quest_checks"] = 2
+    values["shop_checks"] = 1
+    instance.options = SimpleNamespace(**{
+        option: SimpleNamespace(value=value) for option, value in values.items()
+    })
+    instance.random = Random(1)
+    namespace["create_build"] = lambda *_: SimpleNamespace(early_talents=[key])
+    instance.generate_early()
+    assert instance.multiworld.early_items[instance.player][name] == 1
+    assert instance.multiworld.local_early_items[instance.player][name] == 0
+    instance.multiworld.early_items[instance.player][name] = 2
+    instance.generate_early()
+    assert instance.multiworld.early_items[instance.player][name] == 2
+
+
+def test_repeated_anchor_requests_two_multiworld_early_ranks(world):
+    instance, namespace = world
+    catalog = namespace["CATALOG"]
+    key = next(key for key, item in catalog.items.items() if item.kind == "talent")
+    name = catalog.items[key].name
+    defaults = Settings()
+    values = vars(defaults).copy()
+    values["quest_checks"] = 2
+    values["shop_checks"] = 1
+    instance.options = SimpleNamespace(**{
+        option: SimpleNamespace(value=value) for option, value in values.items()
+    })
+    instance.random = Random(1)
+    namespace["create_build"] = lambda *_: SimpleNamespace(early_talents=[key, key])
+    instance.generate_early()
+    assert instance.multiworld.early_items[instance.player][name] == 2
+    assert instance.multiworld.local_early_items[instance.player][name] == 0

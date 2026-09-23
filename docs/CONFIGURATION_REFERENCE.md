@@ -81,10 +81,12 @@ The current manifest contains 42 merchants. The values therefore produce 42, 84,
 
 ### `early_level_max`
 
-- Range: 1–20
+- Range: 3–20
 - Default: 10
 
-Advancement locations at or below this level can hold another world's explicitly requested `early_items` / `local_early_items`. Level 1 has no advancement location. Curated T1/T2 boss, zone-entry, and zone-quest checks are independently marked early-safe.
+Advancement locations at or below this level can hold another world's explicitly requested `early_items` / `local_early_items`. The generated seed extends the cutoff only if this ToME world's requested early ranks need more eligible checks. Level 1 has no advancement location. Curated T1/T2 boss, zone-entry, and zone-quest checks are independently marked early-safe.
+
+The minimum of 3 covers the tightest current-profile seeds found in a 100,000-build option sweep; level 2 was insufficient for some. The generation-side extension guarantees sufficient ToME early-safe locations for the actual build whenever enough non-shop checks exist. See [the capacity audit](EARLY_CHECK_AUDIT.md).
 
 ### `t1_t2_boss_priority`
 
@@ -139,7 +141,7 @@ rank copies from random class categories
 + 60 named +5 stat packages
 + selected prodigies
 - precollected starter ranks
-- precollected dependency/anchor ranks
+- precollected external dependency ranks
 = shuffled item count
 = active location count
 ```

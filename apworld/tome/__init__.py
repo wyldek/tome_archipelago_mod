@@ -2,6 +2,7 @@
 from __future__ import annotations
 import json
 import pkgutil
+from collections import Counter
 from BaseClasses import Item, Location, Region, ItemClassification, Tutorial, LocationProgressType
 from worlds.AutoWorld import World, WebWorld
 from . import components as components
@@ -73,6 +74,12 @@ class ToMEWorld(World):
             t1_t2_boss_priority=bool(self.options.t1_t2_boss_priority.value),
         )
         self.build = create_build(CATALOG, settings, self.random)
+        # Keep bootstrap ranks in the paid pool and request their specified
+        # counts from early checks anywhere in the multiworld.
+        for key, count in Counter(self.build.early_talents).items():
+            name = CATALOG.items[key].name
+            early = self.multiworld.early_items[self.player]
+            early[name] = max(early.get(name, 0), count)
 
     def create_regions(self):
         menu = Region("Menu", self.player, self.multiworld)
@@ -158,6 +165,12 @@ class ToMEWorld(World):
             spoiler_handle.write("Dependency support trees: " + ", ".join(self.build.support_trees) + "\n")
         if self.build.support_precollects:
             spoiler_handle.write("Free dependency ranks: " + ", ".join(self.build.support_precollects) + "\n")
+        if self.build.early_talents:
+            spoiler_handle.write("Early talent ranks: " + ", ".join(self.build.early_talents) + "\n")
+        spoiler_handle.write(
+            f"Early-safe ToME checks: {sum(loc.early for loc in self.build.locations)} "
+            f"for {len(self.build.early_talents)} requested early ranks\n"
+        )
         spoiler_handle.write("Prodigies: " + ", ".join(self.build.prodigies) + "\n")
         spoiler_handle.write(
             f"{len(self.build.pool)} shuffled items / locations; "

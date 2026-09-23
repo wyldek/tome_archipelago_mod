@@ -48,6 +48,15 @@ class TestNoStarters(ToMETestBase):
     options = {"starting_ranks": 0}
 
 
+class TestTightEarlyWindow(ToMETestBase):
+    options = {"early_level_max": 3, "zone_exploration_checks": False,
+               "quest_checks": "none"}
+
+    def test_early_rank_requests_fit_tome_checks(self):
+        early_locations = [loc for loc in self.world.build.locations if loc.early]
+        self.assertGreaterEqual(len(early_locations), len(self.world.build.early_talents))
+
+
 class TestCompletionEvent(ToMETestBase):
     def test_completion_independent_of_visible_victory_reward(self):
         victory = self.world.get_location("Age of Ascendancy — Victory")

@@ -235,6 +235,44 @@ def test_early_level_cutoff_and_boss_priority_options():
     assert all(l.placement == "default" for l in early_bosses)
 
 
+def test_early_window_has_minimum_and_extends_only_for_required_ranks():
+    with pytest.raises(ValidationError, match="early_level_max"):
+        Settings(early_level_max=2).validate()
+
+    export, profile = fixture_export(classes=1, generics=0)
+    combat = next(t for t in export["trees"] if t["key"] == "technique/combat-training")
+    profile["anchor_talents"] = {
+        combat["key"]: [sym for sym in combat["symbols"] for _ in range(5)]
+    }
+    catalog = compile_catalog(export, profile)
+    settings = Settings(
+        class_tree_count=1, generic_tree_count=0, prodigy_count=0,
+        starting_ranks=0, level_ceiling=50, zone_exploration_checks=False,
+        quest_checks="none", shop_checks="off", early_level_max=3,
+    )
+    build = create_build(catalog, settings, Random(1))
+    assert len(build.early_talents) == 35
+    assert sum(loc.early for loc in build.locations) >= len(build.early_talents)
+    assert max(loc.level for loc in build.locations if loc.event == "level" and loc.early) > 3
+    assert all(loc.early for loc in build.locations if loc.event == "level" and loc.level <= 3)
+
+
+def test_early_window_rejects_an_impossible_non_shop_budget():
+    export, profile = fixture_export(classes=3, generics=0)
+    combat = next(t for t in export["trees"] if t["key"] == "technique/combat-training")
+    profile["anchor_talents"] = {
+        combat["key"]: [sym for sym in combat["symbols"] for _ in range(5)]
+    }
+    catalog = compile_catalog(export, profile)
+    with pytest.raises(ValidationError, match="Only .* non-shop ToME checks"):
+        create_build(catalog, Settings(
+            class_tree_count=3, generic_tree_count=0, prodigy_count=0,
+            starting_ranks=0, level_ceiling=50, zone_exploration_checks=False,
+            quest_checks="none", shop_checks="non_progression",
+            shop_checks_per_store=3, early_level_max=3,
+        ), Random(1))
+
+
 def test_too_many_fixed_checks_for_tiny_build_rejected_cleanly():
     c = fixture_catalog()
     with pytest.raises(ValidationError, match="Enabled fixed checks"):

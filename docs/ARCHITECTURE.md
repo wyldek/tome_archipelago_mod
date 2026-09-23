@@ -96,7 +96,7 @@ A release builder should install the current addon, launch ToME to regenerate th
 
 ### Catalog v4 dependency policy
 
-Catalog schema 4 adds generation-only `capability_providers`, `functional_dependencies`, and `anchor_talents`. They are deliberately not copied into slot data. Generation resolves them into concrete support categories and precollected talent ranks before the contract is built. The network/runtime boundary therefore remains contract schema 3, mailbox protocol 1, and character-state schema 3. A new APWorld rejects an old catalog file rather than silently ignoring v4 policy, while already-generated v3 contracts remain valid inputs to the client/addon.
+Catalog schema 4 adds generation-only `capability_providers`, `functional_dependencies`, and `anchor_talents`. They are deliberately not copied into slot data. Generation resolves external requirements into concrete support categories and precollected enabling ranks. Same-tree anchors stay paid and request their specified rank counts through Archipelago's multiworld early-item pool. The network/runtime boundary remains contract schema 3, mailbox protocol 1, and character-state schema 3. A new APWorld rejects an old catalog file rather than silently ignoring v4 policy, while already-generated v3 contracts remain valid inputs to the client/addon.
 
 ## Resource initialization and old saves
 

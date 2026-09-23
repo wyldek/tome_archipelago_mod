@@ -117,8 +117,135 @@ def test_new_admin_resource_is_initialized_only_once(engine):
       snapshot.receipts[#snapshot.receipts+1]={item=extra.code}; publish_snapshot(); poll()
       assert(not AP.last_error, tostring(AP.last_error))
       assert(actor.archipelago_state.resources_initialized.psi)
+      assert(AP.resourceVisible(actor,"psi"))
       assert(actor.psi==50)
       actor.psi=1; poll(); assert(actor.psi==1)
+    ''')
+
+
+def test_resource_display_tracks_learned_skills_without_unlearning_pool_talents(engine):
+    engine.execute('''
+      poll(); assert(not AP.last_error, tostring(AP.last_error))
+      actor.knowTalent=function(self,tid) return self:getTalentLevelRaw(tid)>0 end
+      actor.T_FEEDBACK_POOL=actor.T_TEST_RESOURCE_FEEDBACK
+      actor:learnTalent(actor.T_TEST_RESOURCE_PSI,true,1)
+      actor:learnTalent(actor.T_FEEDBACK_POOL,true,1)
+      assert(AP.resourceVisible(actor,"mana") and not AP.resourceVisible(actor,"psi"))
+      assert(not AP.resourceVisible(actor,"feedback"))
+      local original=actor.knowTalent
+      AP.withResourceDisplay(actor,function()
+        assert(actor:knowTalent(actor.T_TEST_RESOURCE_MANA))
+        assert(not actor:knowTalent(actor.T_TEST_RESOURCE_PSI))
+        assert(not actor:knowTalent(actor.T_FEEDBACK_POOL))
+      end)
+      assert(actor.knowTalent==original)
+      assert(actor:knowTalent(actor.T_TEST_RESOURCE_PSI))
+      actor.definitions.T_TEST_PSI_SKILL={id="T_TEST_PSI_SKILL",type={"psionic/test",1},psi=10}
+      actor:learnTalent("T_TEST_PSI_SKILL",true,1)
+      assert(AP.resourceVisible(actor,"psi"))
+      AP.withResourceDisplay(actor,function()
+        assert(actor:knowTalent(actor.T_TEST_RESOURCE_PSI))
+      end)
+      actor:unlearnTalent("T_TEST_PSI_SKILL")
+      assert(not AP.resourceVisible(actor,"psi"))
+      local ok=pcall(function() AP.withResourceDisplay(actor,function() error("render failure") end) end)
+      assert(not ok and actor.knowTalent==original)
+      assert(actor:getTalentLevelRaw(actor.T_TEST_RESOURCE_PSI)>0)
+    ''')
+
+
+@pytest.mark.parametrize("ui_name,method", [
+    ("ClassicPlayerDisplay", "display"),
+    ("Minimalist", "displayResources"),
+])
+def test_native_resource_ui_adapters_filter_unneeded_pool_bars(engine, ui_name, method):
+    source = (ROOT / f"addon/tome-archipelago/superload/mod/class/uiset/{ui_name}.lua").read_text(encoding="utf-8")
+    engine.execute(f'''
+      poll()
+      actor.knowTalent=function(self,tid) return self:getTalentLevelRaw(tid)>0 end
+      actor:learnTalent(actor.T_TEST_RESOURCE_PSI,true,1)
+      UI={{ {method}=function(self)
+        assert(actor:knowTalent(actor.T_TEST_RESOURCE_MANA))
+        assert(not actor:knowTalent(actor.T_TEST_RESOURCE_PSI))
+        return "drawn"
+      end }}
+      loadPrevious=function() return UI end
+    ''')
+    engine.execute("UI=(function(...)\n" + source + "\nend)()")
+    engine.execute(f'''
+      assert(UI:{method}()=="drawn")
+      assert(actor:knowTalent(actor.T_TEST_RESOURCE_PSI))
+    ''')
+
+
+def test_server_checked_shop_disappears_after_save_resync(engine):
+    engine.execute('''
+      local shop
+      for _,loc in ipairs(snapshot.contract.locations) do
+        if loc.event=="shop" then shop=loc break end
+      end
+      assert(shop)
+      snapshot.scouted_locations=JSON.array({{
+        location=shop.code,item=123456,item_name="Another world item",
+        player=2,player_name="Other player",flags=0,
+      }})
+      publish_snapshot(); poll(); assert(not AP.last_error, tostring(AP.last_error))
+      assert(AP.shopPurchaseAvailable(actor,shop.code))
+      assert(#AP.shopParcels(actor,shop.trigger.zone,shop.trigger.shop,shop.trigger.store)==1)
+      snapshot.checked_locations=JSON.array({shop.code})
+      publish_snapshot(); poll(); assert(not AP.last_error, tostring(AP.last_error))
+      assert(actor.archipelago_state.checks[tostring(shop.code)])
+      assert(not AP.shopPurchaseAvailable(actor,shop.code))
+      assert(not AP.recordShopPurchase(actor,shop.code))
+      assert(#AP.shopParcels(actor,shop.trigger.zone,shop.trigger.shop,shop.trigger.store)==0)
+    ''')
+
+
+def test_shop_callback_only_charges_for_live_unchecked_parcel(engine):
+    store_source = (ROOT / "addon/tome-archipelago/superload/mod/class/Store.lua").read_text(encoding="utf-8")
+    engine.execute('''
+      Dialog={simplePopup=function() end,yesnoPopup=function(_,_,_,callback) purchase_callback=callback end}
+      package.preload["engine.ui.Dialog"]=function() return Dialog end
+      package.preload["mod.class.Object"]=function() return {new=function(x) return x end} end
+      Store={interact=function() end,doBuy=function() error("native buy") end,
+        getInven=function(self) return self.inven end, inven={}}
+      loadPrevious=function() return Store end
+    ''')
+    engine.execute("Store=(function(...)\n" + store_source + "\nend)()")
+    engine.execute('''
+      poll()
+      local shop
+      for _,loc in ipairs(snapshot.contract.locations) do
+        if loc.event=="shop" then shop=loc break end
+      end
+      assert(shop)
+      local key=tostring(shop.code)
+      actor.archipelago_state.scouts[key]={item_name="Parcel",player_name="Other",player=2}
+      game.zone={short_name=shop.trigger.zone}
+      actor.money=100
+      actor.incMoney=function(self,amount) self.money=self.money+amount end
+      local parcel={archipelago_parcel=true,archipelago_location=shop.code,
+        archipelago_price=25,archipelago_zone=shop.trigger.zone,archipelago_item_name="Parcel",
+        getName=function() return "Parcel" end}
+      Store.inven={parcel}
+      Store:doBuy(actor,parcel,1,1,nil)
+      assert(purchase_callback)
+      purchase_callback(true)
+      assert(actor.money==75 and actor.archipelago_state.checks[key] and #Store.inven==0)
+      purchase_callback(true)
+      assert(actor.money==75)
+      actor.archipelago_state.checks[key]=nil
+      Store.inven={parcel}
+      Store:doBuy(actor,parcel,1,1,nil)
+      Store.inven={}
+      purchase_callback(true)
+      assert(actor.money==75 and not actor.archipelago_state.checks[key])
+      Store.inven={parcel}
+      Store:doBuy(actor,parcel,1,1,nil)
+      snapshot.checked_locations=JSON.array({shop.code})
+      publish_snapshot(); poll()
+      purchase_callback(true)
+      assert(actor.money==75 and actor.archipelago_state.checks[key])
     ''')
 
 

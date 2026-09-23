@@ -38,7 +38,7 @@ class Settings:
         integer(self.stat_packages_per_stat, "stat_packages_per_stat", 1, 10)
         integer(self.level_ceiling, "level_ceiling", 10, 50)
         integer(self.shop_checks_per_store, "shop_checks_per_store", 1, 3)
-        integer(self.early_level_max, "early_level_max", 1, 20)
+        integer(self.early_level_max, "early_level_max", 3, 20)
         if type(self.zone_exploration_checks) is not bool:
             raise ValidationError("zone_exploration_checks must be boolean")
         if type(self.t1_t2_boss_priority) is not bool:
@@ -80,6 +80,7 @@ class Build:
     starters: list[str]
     pool: list[str]
     locations: list[LocationDef]
+    early_talents: list[str] = field(default_factory=list)
 
     @property
     def trees(self) -> list[str]:
@@ -214,7 +215,7 @@ def _resolve_support_dependencies(
     active_tree_keys: list[str],
     ready_tree_keys: list[str] | None = None,
 ):
-    """Resolve hard dependencies, functional capabilities, and anchor talents.
+    """Resolve hard dependencies and functional capabilities.
 
     ``active_tree_keys`` contains every tree that belongs to the generated build,
     including prodigy-gated bonus trees. ``ready_tree_keys`` contains categories
@@ -222,7 +223,7 @@ def _resolve_support_dependencies(
     or capability dependency promotes its provider to a support tree when needed
     so the enabling talent is actually usable when the dependent tree is usable.
 
-    All enabling/anchor ranks are precollected exactly once. Newly introduced
+    All external enabling ranks are precollected exactly once. Newly introduced
     support trees contribute their remaining ranks to the shuffled pool.
     """
     active = set(active_tree_keys)
@@ -257,11 +258,6 @@ def _resolve_support_dependencies(
         if source in processed:
             continue
         processed.add(source)
-
-        # Same-tree anchors establish mechanics that later ranks in the category
-        # expect to exist (e.g. Call Shadows, Prophecy, Temporal Hounds).
-        for sym in catalog.anchor_talents.get(source, ()):
-            precollect(sym)
 
         # Explicit exact-tree dependencies remain useful for relationships that
         # are not naturally expressed as a reusable capability.
@@ -355,6 +351,20 @@ def create_build(catalog: Catalog, settings: Settings, rng: Random) -> Build:
 
     precollected = starters + support_precollects
     pool = subtract_copies(full, precollected)
+    # Each anchor occurrence requests one paid rank from Archipelago's multiworld
+    # early pool.  Existing starter/dependency ranks satisfy that many requests.
+    requested_early = Counter(
+        "talent:" + sym
+        for tree in active_tree_keys
+        for sym in catalog.anchor_talents.get(tree, ())
+    )
+    precollected_counts = Counter(precollected)
+    pool_counts = Counter(pool)
+    early_talents = [
+        key
+        for key, wanted in requested_early.items()
+        for _ in range(min(max(0, wanted - precollected_counts[key]), pool_counts[key]))
+    ]
 
     # Fixed world checks consume the existing reward budget; they never create
     # filler items.  Level checks absorb whatever budget remains.
@@ -386,11 +396,33 @@ def create_build(catalog: Catalog, settings: Settings, rng: Random) -> Build:
             "disable some optional checks or increase the build size"
         )
     schedule = allocate_level_rewards(level_total, tuple(range(2, settings.level_ceiling + 1)))
+    # A short early window can leave fewer ToME locations than the ranks this
+    # world requests from AP's multiworld early pool. Extend only as far as the
+    # generated level schedule requires; keep every requested rank paid.
+    early_fixed = sum(p.early for p in primary_locations)
+    effective_early_level_max = settings.early_level_max
+    early_slots = early_fixed + sum(
+        count for level, count in schedule.items() if level <= effective_early_level_max
+    )
+    if early_slots < len(early_talents):
+        for level, count in schedule.items():
+            if level <= effective_early_level_max or count == 0:
+                continue
+            effective_early_level_max = level
+            early_slots += count
+            if early_slots >= len(early_talents):
+                break
+    if early_slots < len(early_talents):
+        raise ValidationError(
+            f"Only {early_slots} non-shop ToME checks can hold "
+            f"{len(early_talents)} requested early talent ranks; "
+            "reduce shop checks or increase the build size"
+        )
     locations = [
         LocationDef(
             f"Advancement {level:02d} — Reward {i:02d}",
             level_location_id(level, i), level, i, "level", {"level": level},
-            "default", level <= settings.early_level_max,
+            "default", level <= effective_early_level_max,
         )
         for level, n in schedule.items()
         for i in range(1, n + 1)
@@ -411,6 +443,7 @@ def create_build(catalog: Catalog, settings: Settings, rng: Random) -> Build:
         starters,
         pool,
         locations,
+        early_talents,
     )
 
 

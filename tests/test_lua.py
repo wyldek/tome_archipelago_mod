@@ -130,3 +130,28 @@ loadPrevious=function(...)return actor end
     assert vm.globals().allowed is False
     vm.execute('obj.explode=true; ok=pcall(function()actor:canWearObject(obj)end)')
     assert vm.globals().ok is False and vm.globals().obj.require.stat==50
+
+
+def test_finger_of_death_optional_capture_needs_possession_and_body_storage():
+    vm,codec,ap,c,b,item=engine()
+    vm.execute(r'''
+poll()
+actor.T_POSSESS="T_POSSESS"
+actor.T_BODIES_RESERVE="T_BODIES_RESERVE"
+function actor:callTalent(tid,method,...)
+  return tid..":"..method
+end
+loadPrevious=function(...)return actor end
+''')
+    vm.execute((LUA/"superload/mod/class/Actor.lua").read_text(encoding="utf-8"))
+    vm.execute(r'''
+assert(actor:callTalent(actor.T_POSSESS,"absorbCheck")==nil)
+assert(actor:callTalent(actor.T_POSSESS,"basicAbsorbCheck")=="T_POSSESS:basicAbsorbCheck")
+actor.raw.T_POSSESS=1
+assert(actor:callTalent(actor.T_POSSESS,"absorbCheck")==nil)
+actor.raw.T_BODIES_RESERVE=1
+assert(actor:callTalent(actor.T_POSSESS,"absorbCheck")=="T_POSSESS:absorbCheck")
+actor.archipelago_character=false
+actor.raw.T_BODIES_RESERVE=0
+assert(actor:callTalent(actor.T_POSSESS,"absorbCheck")=="T_POSSESS:absorbCheck")
+''')
