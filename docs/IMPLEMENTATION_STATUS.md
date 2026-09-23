@@ -47,4 +47,4 @@ Core end-to-end behavior has been exercised in the real game: the client bound t
 4. Run shared multiworlds where ToME holds another game's progression and another game holds ToME upgrades.
 5. Exercise prodigy-added categories, capability fallbacks, anchors, and support trees in live play.
 6. Test death/restart, save rollback, process crash, and long bridge disconnect scenarios.
-7. Build/package in a clean Archipelago 0.6.7 checkout and run upstream APWorld tests for each release artifact.
+7. Repeat the clean Archipelago 0.6.7 package and native test checks when the ToME content set or release source changes.

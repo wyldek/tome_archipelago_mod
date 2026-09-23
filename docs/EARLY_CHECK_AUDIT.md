@@ -38,4 +38,4 @@ Native Archipelago 0.6.7 fill regressions cover tight-window solo fills with bos
 
 ## Source of counts
 
-The request limits use `profiles/wanderer-full.json`, the checked-in 1.7.6 tree/item metadata snapshot in `local/compiled-catalog.json`, and the current generation algorithm. Location counts follow `tome_ap/generation.py` and `tome_ap/locations.py`. The snapshot is an audit input; 1.0.1 release packages have not been rebuilt.
+The request limits use `profiles/wanderer-full.json`, a local 1.7.6 tree/item metadata snapshot, and the current generation algorithm. Location counts follow `tome_ap/generation.py` and `tome_ap/locations.py`. The final 1.0.2 APWorld was rebuilt from a fresh Steam-enabled ToME runtime export; its 291 tree keys and 1,232 item IDs match the audited snapshot and prior release.
