@@ -1,4 +1,3 @@
-\
 # Tool reference
 
 ## `tools/build.py`
@@ -14,6 +13,7 @@ Important modes:
 - Full build: requires `--export` pointing to a real schema-2 `runtime-export.json`; writes the compiled catalog and staged world.
 - `--package-apworld`: additionally requires `--ap-root` pointing to an Archipelago source checkout containing `Launcher.py`; invokes Archipelago's official **Build APWorlds** component and copies `tome.apworld` to the output directory.
 - If `<ap-root>/worlds/tome` already exists, the development install step deliberately refuses to overwrite it. Remove/rename the old staged world first.
+- The package gate requires pytest and Lupa, a clean tracked Archipelago checkout at tag `0.6.7`, and native ToME tests with the actual staged catalog. It compares packaged code/catalog bytes with the staged world before copying the APWorld. The 1.0.2 release run passed 34 native tests.
 
 Typical release command:
 
@@ -23,6 +23,8 @@ python tools/build.py `
   --ap-root C:\dev\Archipelago `
   --package-apworld
 ```
+
+If the official launcher stops while installing optional dependencies for unrelated bundled worlds, follow the [installation guide's packaging fallback](INSTALL.md#8-build-and-package-the-apworld). Archipelago's `SKIP_REQUIREMENTS_UPDATE=1` setting skips that updater; keep the native tests and packaged-byte comparison as release gates.
 
 ## `tools/install_addon.py`
 

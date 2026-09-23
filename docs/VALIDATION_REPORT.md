@@ -25,7 +25,7 @@ This report records what was actually exercised for the 1.0.2 dependency-model u
 
 ## Automated source results
 
-From the 1.0.2 source tree:
+During that earlier dependency-update run:
 
 ```text
 python -m pytest -q -rs
@@ -77,9 +77,9 @@ The eleven functional fallbacks were also forced individually and verified to se
 
 Existing generated 1.0.x contracts are therefore not rewritten by 1.0.2. They remain self-contained and are accepted by the new client/runtime code, but they do not gain dependency repairs retroactively.
 
-## Final artifact checks
+## Earlier artifact comparison
 
-The generated `.teaa` and `.apworld` pass ZIP integrity checks. The APWorld's packaged core files/catalog were compared against the staged source used for the build.
+The earlier dependency-update `.teaa` and `.apworld` passed ZIP integrity checks. The APWorld's packaged core files/catalog were compared against the staged source used for that earlier build. The final 1.0.2 artifacts and hashes are reported at the top of this document.
 
 Compared with the generated 1.0.1 artifacts:
 

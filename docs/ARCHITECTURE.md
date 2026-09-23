@@ -102,6 +102,12 @@ Catalog schema 4 adds generation-only `capability_providers`, `functional_depend
 
 Each resource receives its native infrastructure and initial AP resource policy once, tracked by a saved `resources_initialized` map. Routine category reconciliation does not refill resources or repeatedly reapply regeneration floors. Existing schema-3 saves without this map adopt the resources used by their selected, extra, or already-known categories without changing current resource values, maxima, regeneration, or the applied receipt cursor. An unseen resource introduced later still initializes once.
 
+Classic and Minimalist UI superloads decide bar visibility from talents actually learned by the AP character. Native pool talents may be initialized earlier without exposing every resource bar at once.
+
+## Paid shop purchase state
+
+The bridge scouts enabled parcel locations and the addon displays their item and recipient. The store adapter checks availability when the confirmation dialog opens and again when purchase is confirmed. It removes gold only after the second check, refunds it if the check cannot be recorded, and removes the parcel after successful recording. Server-confirmed shop checks are reconciled with saved local state, so restoring an older save does not make an already-checked parcel purchasable again.
+
 ## Runtime content and administrative grants
 
 Birth verifies native availability for selected categories and prodigies. A missing unused catalog talent no longer blocks birth. This is per-build validation, not a promise of compatibility with arbitrary content modifications. For an out-of-build talent delivery, the addon validates all catalog members of the category against the installed native category and derives its resources before mutating that category. Valid definitions are saved for subsequent deliveries. Unavailable or mismatched content remains an explicit error; receipt skipping and automatic replay after partial mutation are still forbidden.
@@ -110,4 +116,4 @@ The compiler determines installed, non-excluded prodigies before adding their bo
 
 ## Optional native-online isolation
 
-The 1.0 runtime has **no offline-policy gate**. Historical/developer tools can still block the ToME executable from native online services during experiments, but `offline-policy.json` is not read by the addon and is not required for synchronization.
+The 1.0.2 runtime has **no offline-policy gate**. Historical/developer tools can still block the ToME executable from native online services during experiments, but `offline-policy.json` is not read by the addon and is not required for synchronization.

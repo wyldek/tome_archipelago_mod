@@ -1,8 +1,8 @@
-# Unreleased review fixes
+# Historical review fixes before 1.0.2
 
 Base: `wyldek/tome_archipelago_mod` commit `e3fe3d0866545b945e1d5634bde0d840f363a2c7`.
 
-This is a source correction set, not a new published release or a claim of full-game qualification. The release files already in the repository are unchanged and do not contain these fixes.
+This records an earlier source correction set and its limited local verification. These fixes are included in the current 1.0.2 release artifacts. Use the [1.0.2 release notes](1.0.2_RELEASE_NOTES.md) and [final validation report](VALIDATION_REPORT.md) for current release status; the results and build instructions below describe the earlier review run.
 
 ## Changes
 
@@ -31,7 +31,7 @@ Four negative-control tests were run against the original source and failed as e
 
 **Not executed in this environment:** the complete original standalone suite through Lupa; the native Archipelago 0.6.7 test/fill suite; GitHub Actions; full release packaging using a real runtime export; or an actual ToME campaign. Lupa and a runnable Archipelago checkout were unavailable here. The native tests and packaging gates are supplied for execution in the release builder's environment, not reported as already passing. Fake-engine tests and AP API doubles cannot certify native callback side effects or combat solvability.
 
-## Validate and rebuild
+## Historical validate-and-rebuild instructions
 
 From the repository root, install the test dependencies and run the full local gate:
 
@@ -57,4 +57,4 @@ python tools/build.py `
   --package-apworld
 ```
 
-Packaging now runs the full standalone gate and the native APWorld tests. Fix any failures before distributing a release. The output is `dist/tome.apworld` and `dist/tome-archipelago.teaa`; existing files under `release/` are not automatically updated. Perform the real-game and shared-multiworld smoke tests in [Testing](TESTING.md) before replacing published assets.
+Packaging runs the full standalone gate and native APWorld tests. The output is `dist/tome.apworld` and `dist/tome-archipelago.teaa`; it does not automatically update tracked files under `release/`. The 1.0.2 artifacts have since been rebuilt, validated, and copied there. See [Testing](TESTING.md) for remaining live-game and shared-multiworld qualification.

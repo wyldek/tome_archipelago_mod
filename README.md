@@ -1,6 +1,6 @@
 # Tales of Maj'Eyal — Archipelago integration
 
-**Version 1.0.2.** This release uses catalog schema 4 dependency protection while keeping contract schema 3 and mailbox protocol 1 for compatibility with existing generated seeds. Core item/check transport, starter-item delivery, level/zone checks, disconnected check accumulation, and reconnect catch-up have been smoke-tested in the real game. Full-campaign coverage, every prodigy/resource combination, and broad shared-multiworld qualification are still limited; see [Implementation status](docs/IMPLEMENTATION_STATUS.md).
+**Current release: 1.0.2** for Tales of Maj'Eyal 1.7.6 and Archipelago 0.6.7. Download the matching [ToME addon](release/tome-archipelago.teaa) and [APWorld](release/tome.apworld) from this repository. This release adds catalog-schema-4 dependency protection, early paid ranks for same-tree bootstraps, resource bars that appear when a relevant talent is learned, and safer paid shop purchases. Generated contracts remain schema 3 and the mailbox protocol remains 1. See the [1.0.2 release notes](docs/1.0.2_RELEASE_NOTES.md) and [validation report](docs/VALIDATION_REPORT.md).
 
 The integration has three parts:
 
@@ -16,8 +16,8 @@ Tales of Maj'Eyal
 
 ## Quick start
 
-1. Install `tome.apworld` through Archipelago Launcher's **Install APWorld** component and restart the Launcher.
-2. Install the matching `tome-archipelago.teaa` in ToME's `game/addons` directory and restart ToME.
+1. Install the [1.0.2 APWorld](release/tome.apworld) through Archipelago Launcher's **Install APWorld** component and restart the Launcher.
+2. Install the matching [1.0.2 addon](release/tome-archipelago.teaa) in ToME's `game/addons` directory and restart ToME.
 3. Start ToME once with the addon enabled. The addon creates the mailbox marker and runtime export. On a normal Windows profile the mailbox is:
 
    ```text
@@ -28,7 +28,7 @@ Tales of Maj'Eyal
 5. Connect to the multiworld and enter the slot name if prompted.
 6. Start ToME and create an **Archipelago Adventurer**. The class appears only when a valid bridge snapshot is present.
 
-The old development path `...\tome\tome\archipelago` is not the 1.0 mailbox. Marker schema 2 identifies the current `/archipelago` virtual root and causes stale cached paths to be rejected.
+The old development path `...\tome\tome\archipelago` is not the current mailbox. Marker schema 2 identifies the `/archipelago` virtual root and causes stale cached paths to be rejected.
 
 ## What the seed changes
 
@@ -55,7 +55,7 @@ Prodigies can add additional AP-managed categories. Reviewed dependencies can ad
 Precollected ranks are real AP items but are removed from the shuffled pool before placement:
 
 - `starting_ranks` precollects 0–2 likely offensive starter ranks. Starter selection is a metadata heuristic, not a guarantee that every equipment/resource combination is immediately usable. With the default value of 2, both ranks normally go into the same starter talent when its cap permits it; otherwise a second starter can be used.
-- Dependency protection precollects enabling ranks from external support categories. Functional requirements reuse an already-rolled provider when possible and only add the reviewed fallback tree when necessary. Same-tree anchor ranks remain paid shuffled items; the reviewed number of ranks is requested through Archipelago's multiworld early-item pool.
+- Dependency protection precollects enabling ranks from external support categories. Functional requirements reuse an already-rolled provider when possible and only add the reviewed fallback tree when necessary. Same-tree anchor ranks remain paid shuffled items; the reviewed number of ranks is requested through Archipelago's multiworld early-item pool. Only the requested copies must land early; remaining copies can be placed normally.
 
 The item pool is therefore based on the exact runtime catalog:
 
@@ -109,6 +109,8 @@ The always-present boss checks are:
 
 The ten T1/T2 guardian locations are early-safe. With `t1_t2_boss_priority: true` they are also Archipelago `PRIORITY` locations, which Archipelago's early pass cannot use for useful ToME talent ranks.
 
+`early_level_max` starts at level 10 by default. If a seed needs more checks for its requested early talent ranks, generation extends the effective early advancement window up to `level_ceiling` or reports a capacity shortage. It does not count priority boss checks as usable talent capacity. The minimum configured value is 3. See the [early-check capacity audit](docs/EARLY_CHECK_AUDIT.md).
+
 ### Zone-entry check manifest
 
 When `zone_exploration_checks` is enabled, checks exist for Trollmire, Norgos Lair, Ruins of Kor'Pul, Scintillating Caves, Rhaloren Camp, Heart of the Gloom, The Maze, Sandworm Lair, Daikara, Old Forest, Dreadfell, Reknor, Gates of Morning, the four Orc Prides, and High Peak.
@@ -130,6 +132,8 @@ Parcel prices are fixed AP prices:
 - Gates of Morning: 250, 500, 1000 gold
 
 Shop parcels can contain useful/filler/trap items but reject **logical advancement from any world**. The client scouts shop placements with `create_as_hint: 0`, so seeing the parcel contents in the merchant does not create a public Archipelago hint.
+
+The purchase is checked again when confirmed, so an already-claimed or stale parcel cannot be bought twice. If recording the check fails, the gold is refunded. Server-confirmed shop checks are reconciled after restoring an older save.
 
 ## Hint naming cheatsheet
 
@@ -155,6 +159,8 @@ Category/talent/prodigy capitalization comes from the installed ToME runtime cat
 AP boss and campaign checks are additive observers. They do not replace native XP, loot, artifacts, gold, quest rewards, or map progression. AP characters do not receive normal discretionary class/generic/stat/category/prodigy points; those advancement currencies are scrubbed because the corresponding upgrades are owned by Archipelago.
 
 Equipment stat/level eligibility is bypassed for the AP character so random builds can use their tools, while normal inventory/slot constraints remain. AP characters also suppress vanilla antimagic/arcane mutual-exclusion flags so a random seed can contain both systems.
+
+The addon enables native resource plumbing for selected and later-learned talents. A resource bar appears in the Classic or Minimalist display when the character learns a talent that uses that resource. Routine reconciliation does not refill spent resources.
 
 ## Death, saves, disconnects, and reconnects
 
@@ -198,7 +204,7 @@ The `.teaa` can be built directly from the repository:
 python tools/build.py --addon-only
 ```
 
-A reproducible `.apworld` additionally needs a **fresh schema-2 `runtime-export.json` from ToME 1.7.6 using the current addon**, plus an Archipelago 0.6.7 source checkout. The release catalog intentionally reflects the content/DLC installed in the ToME installation used for that export.
+A reproducible `.apworld` additionally needs a **fresh schema-2 `runtime-export.json` from ToME 1.7.6 using the current addon**, plus an Archipelago 0.6.7 source checkout. The 1.0.2 release was built from a Steam-enabled installation with Possessor content. Its catalog has 291 AP trees, 1,232 item types, and 62 prodigies; tree keys and item IDs match the 1.0.1 release catalog. A different installed DLC set can produce a different catalog.
 
 Release packaging requires the test dependencies, Git, and a clean Archipelago checkout at tag `0.6.7`. The packager runs the standalone suite with Lupa required, runs native APWorld tests against the staged catalog, and verifies packaged code/catalog bytes before copying the final APWorld.
 
@@ -216,13 +222,12 @@ That produces/stages the compiled catalog and copies the officially packaged `to
 
 ## Current qualification level
 
-1.0.2 is the current feature-complete release of the design, not a claim that every ToME combination has been exhaustively tested. Core bridge transport and reconnect behavior have been exercised in the real game. The remaining qualification backlog includes full campaigns, broad multiworld play, every optional location family, every installed-DLC/prodigy/resource combination, and crash/save edge cases.
+The 1.0.2 source suite passed 231 Python/Lua tests, the staged APWorld passed 34 native Archipelago tests, and both release archives passed integrity and staged-source checks. Core bridge transport and reconnect behavior have been exercised in the real game. Full campaigns, broad multiworld play, every optional location family, and unusual DLC/prodigy/resource combinations still need more live qualification; see [Implementation status](docs/IMPLEMENTATION_STATUS.md).
 
 Do not enable this addon alongside Rosen's ToME Archipelago addon. Both declare the internal addon name `archipelago`, but they implement different clients, item models, and seed contracts.
 
 ## Project docs
 
-- [Review fixes and verification limits](docs/REVIEW_FIXES.md)
 - [Installation and source build](docs/INSTALL.md)
 - [Configuration reference](docs/CONFIGURATION_REFERENCE.md)
 - [Ruleset](docs/RULESET.md)
@@ -231,10 +236,11 @@ Do not enable this addon alongside Rosen's ToME Archipelago addon. Both declare 
 - [Implementation status](docs/IMPLEMENTATION_STATUS.md)
 - [Testing](docs/TESTING.md)
 - [Validation report](docs/VALIDATION_REPORT.md)
+- [Early-check capacity audit](docs/EARLY_CHECK_AUDIT.md)
 - [Tool reference](docs/TOOL_REFERENCE.md)
 - [1.0.2 release notes](docs/1.0.2_RELEASE_NOTES.md)
 - [1.0.0 release notes](docs/1.0.0_RELEASE_NOTES.md)
 
-Historical `0.2.x` beta notes are retained under `docs/` as historical records and should not be treated as current setup instructions.
+The [review-fixes record](docs/REVIEW_FIXES.md), [1.0.0 release notes](docs/1.0.0_RELEASE_NOTES.md), and `0.2.x` beta notes document earlier states. Use the 1.0.2 guides above for current setup and validation.
 
 This project's original code is MIT-licensed. ToME, Archipelago, DLC, and third-party libraries remain under their own licenses; game binaries, DLC, and third-party source are not bundled.

@@ -88,6 +88,8 @@ Advancement locations at or below this level can hold another world's explicitly
 
 With default boss priority, Archipelago's early pass cannot put useful ToME talents at the ten priority boss checks. Level 3 alone can therefore be insufficient; generation extends the actual early advancement window when needed. It rejects builds with too few usable checks at any level. See [the capacity audit](EARLY_CHECK_AUDIT.md).
 
+The early window applies to the requested number of copies of each talent during Archipelago's early-item pass. Additional copies return to ordinary placement afterward.
+
 ### `t1_t2_boss_priority`
 
 - `true` (default) / `false`

@@ -15,7 +15,7 @@ The Python suite checks deterministic generation, cap-based budgets, stable IDs,
 
 The APWorld contains native `WorldTestBase`, two-slot fill, and early-item placement tests. The early tests cover tight solo windows with boss priority on and off, repeated talent copies, and a second game's locations receiving ToME talents. `tools/build.py --package-apworld` runs them after staging a real compiled catalog into a clean Archipelago checkout at tag `0.6.7`, before official packaging. The default configuration explicitly enables inherited fill/beatability tests. A separately staged world can be validated with `python tools/validate.py --ap-root C:\dev\Archipelago`.
 
-`tests/test_review_world_contract.py` uses API doubles to exercise actual APWorld method bodies in the standalone suite. It is not a replacement for native AP fill/solver tests. Test results must identify which layer actually ran. See [Review fixes](REVIEW_FIXES.md) for the scope of the supplied patch's local verification.
+`tests/test_review_world_contract.py` uses API doubles to exercise actual APWorld method bodies in the standalone suite. It is not a replacement for native AP fill/solver tests. Test results must identify which layer actually ran. The [1.0.2 validation report](VALIDATION_REPORT.md) records the release results; [Review fixes](REVIEW_FIXES.md) preserves an earlier, narrower development run.
 
 ## Required release smoke test
 
@@ -30,6 +30,8 @@ Before publishing a release artifact:
 - Reach a level with advancement checks and verify `game.json` records them.
 - Disconnect the AP client, trigger another check, reconnect, and verify the pending check is sent once.
 - Verify at least one post-start received ToME item applies once and survives save/reload.
+- Learn a talent that uses a previously unused resource and verify its bar appears in both Classic and Minimalist displays without refilling a spent resource during idle polling.
+- Buy a paid parcel, restore an older save, and verify the server-confirmed purchase cannot be made again.
 
 ## Native-engine behavior matrix
 
@@ -47,6 +49,7 @@ Before publishing a release artifact:
 | Admin/overflow copy arrives | Valid native/catalog talents outside the rolled categories can initialize their category; repeated ranks obey the cap. Missing/mismatched native definitions stop delivery rather than skipping a receipt. |
 | Idle render polling after spending resources | Resource amount, maximum, and regeneration are unchanged by repeated polling. |
 | Existing save lacks resource-initialization flags | Adopt resources already used by that save without a refill or cursor reset. |
+| A talent starts using a new resource | Its bar appears after the rank is learned; other unused resource bars stay hidden. |
 | Unused optional content is absent | Birth validates selected content; unused catalog entries do not by themselves block birth. |
 | Missing required selected content | Fail validation before initializing the AP character. |
 
@@ -73,6 +76,9 @@ For each town tier, verify:
 - viewing the store does not create an AP hint (`create_as_hint: 0`);
 - exact gold deduction;
 - one-time check behavior;
+- stale or duplicate confirmation is rejected before gold is removed;
+- recording failure refunds gold;
+- restoring an older save cannot repurchase a server-confirmed parcel;
 - no ordinary inventory transfer for the parcel;
 - progression items from any world are rejected by placement rules.
 

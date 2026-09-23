@@ -1,7 +1,6 @@
-\
 # Installation and source-build workflow
 
-This document targets **Tales of Maj'Eyal 1.7.6** and **Archipelago 0.6.7**.
+This document targets the matching **1.0.2** [APWorld](../release/tome.apworld) and [ToME addon](../release/tome-archipelago.teaa), **Tales of Maj'Eyal 1.7.6**, and **Archipelago 0.6.7**.
 
 ## 1. Using the release artifacts
 
@@ -34,7 +33,7 @@ mailbox-info.json      schema-2 marker identifying /archipelago
 runtime-export.json    runtime talent/category metadata from this ToME install
 ```
 
-The old development path `...\tome\tome\archipelago` is not the 1.0 mailbox.
+The old development path `...\tome\tome\archipelago` is not the current mailbox.
 
 ### Connect the Archipelago client
 
@@ -74,14 +73,10 @@ cd C:\dev\tome_archipelago_mod
 py -3.12 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
-python -m pip install "pytest>=8,<9"
+python -m pip install -e ".[test]"
 ```
 
-Install `lupa` only if you want the optional fake-engine Lua tests:
-
-```powershell
-python -m pip install lupa
-```
+The test extra installs pytest and Lupa. Release validation requires both; a plain developer pytest run may skip the Lupa-backed module if Lupa is absent.
 
 ## 4. Run the standalone tests
 
@@ -90,7 +85,7 @@ python -m pytest -q -rs
 python -m compileall -q tome_ap apworld tools tests ToMEClient.py
 ```
 
-The Lua test module is skipped when Lupa is unavailable. These tests validate code-level invariants but do not replace real T-Engine or multiworld testing.
+For the full release gate, run `python tools/validate.py` with Lupa installed. These tests validate code-level invariants but do not replace real T-Engine or multiworld testing.
 
 ## 5. Build the `.teaa` from source
 
@@ -118,7 +113,7 @@ C:\Users\<you>\T-Engine\4.0\tome\archipelago\runtime-export.json
 
 It must contain `"schema": 2`. Schema-1 exports are intentionally rejected by the full catalog compiler.
 
-The export reflects the content and DLC installed in that ToME installation. A release APWorld therefore represents the installed content set used to build it. Regenerate the export whenever the addon or installed ToME content changes before making a release artifact.
+The export reflects the content and DLC loaded in that ToME session. A release APWorld therefore represents the content set used to build it. The 1.0.2 release used a Steam-enabled launch with Possessor content; its compiled catalog has 291 AP trees, 1,232 item types, and 62 prodigies. Regenerate the export whenever the addon or loaded ToME content changes before making a release artifact.
 
 ## 7. Set up the pinned Archipelago checkout
 
@@ -158,6 +153,25 @@ dist\tome.apworld           official APWorld package
 
 A synthetic fixture catalog is refused for a release APWorld.
 
+The official Archipelago launcher may try to install optional dependencies for unrelated bundled worlds before packaging. If that interrupts a noninteractive build **after the ToME tests pass**, the tested `worlds/tome` stage remains in the AP checkout. From this repository's activated Python environment, finish with:
+
+```powershell
+$env:SKIP_REQUIREMENTS_UPDATE = "1"
+Push-Location C:\dev\Archipelago
+try {
+  python Launcher.py 'Build APWorlds' -- "Tales of Maj'Eyal"
+  if ($LASTEXITCODE -ne 0) { throw "APWorld packaging failed" }
+}
+finally { Pop-Location; Remove-Item Env:SKIP_REQUIREMENTS_UPDATE }
+python tools/validate.py --ap-root C:\dev\Archipelago
+if ($LASTEXITCODE -ne 0) { throw "Native validation failed" }
+python -c "from pathlib import Path; from tools.validate import verify_apworld; verify_apworld(Path(r'C:\dev\Archipelago\build\apworlds\tome.apworld'), Path(r'C:\dev\Archipelago\worlds\tome'))"
+if ($LASTEXITCODE -ne 0) { throw "Package differs from staged world" }
+Copy-Item C:\dev\Archipelago\build\apworlds\tome.apworld dist\tome.apworld
+```
+
+Run these steps only with the staged ToME world and pinned checkout produced by the build above. The [1.0.2 validation report](VALIDATION_REPORT.md) records this path and the final archive checks.
+
 ## 9. Generate a multiworld
 
 Generate the template through Archipelago or start with the repository examples. Minimal settings are:
@@ -196,7 +210,7 @@ python ToMEClient.py `
 
 The repository still contains `tools/windows_offline.ps1` and `tools/confirm_manual_offline.py` for developers who deliberately want to isolate ToME's native online services while testing modified addons.
 
-**They are not part of the 1.0 runtime protocol.** The addon does not read `offline-policy.json`, and no offline acknowledgement is required to create or synchronize an AP character. The Python bridge itself must remain online to reach the Archipelago server.
+**They are not part of the 1.0.2 runtime protocol.** The addon does not read `offline-policy.json`, and no offline acknowledgement is required to create or synchronize an AP character. The Python bridge itself must remain online to reach the Archipelago server.
 
 ## 12. Troubleshooting order
 

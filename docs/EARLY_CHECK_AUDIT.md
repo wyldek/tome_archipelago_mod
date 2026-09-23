@@ -1,4 +1,4 @@
-# Early-check capacity audit (1.0.2 development)
+# Early-check capacity audit (1.0.2 release)
 
 ## Requested early ranks
 

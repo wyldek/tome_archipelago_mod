@@ -7,7 +7,7 @@ The release source is organized as follows. Generated `dist/`, local runtime exp
 README.md
 LICENSE
 ToMEClient.py
-SHA256SUMS.json
+DOC_AUDIT_SUMMARY.md            historical 1.0 documentation audit
 pyproject.toml
 
 addon/tome-archipelago/
@@ -21,6 +21,8 @@ addon/tome-archipelago/
   superload/mod/class/NPC.lua
   superload/mod/class/Player.lua
   superload/mod/class/Store.lua
+  superload/mod/class/uiset/ClassicPlayerDisplay.lua
+  superload/mod/class/uiset/Minimalist.lua
 
 apworld/tome/
   .apignore
@@ -95,6 +97,7 @@ docs/
   ARCHITECTURE.md
   CONFIGURATION_REFERENCE.md
   DEPENDENCY_MODEL.md
+  EARLY_CHECK_AUDIT.md
   FILE_INVENTORY.md
   IMPLEMENTATION_STATUS.md
   INSTALL.md
@@ -105,11 +108,12 @@ docs/
   TOOL_REFERENCE.md
   VALIDATION_REPORT.md
   validation.json
-  SOURCE_ANCHOR_AUDIT.json
   0.2.0_BETA_NOTES.md ... 0.2.7_BETA_NOTES.md   # historical only
 
 release/
   NEXT_STEPS.md
+  tome-archipelago.teaa
+  tome.apworld
 ```
 
-`tome.apworld`, `tome-archipelago.teaa`, `catalog.json`, and the staged `worlds/tome` directory are build outputs. The canonical release build process is documented in `docs/INSTALL.md`.
+The two archives in `release/` are tracked 1.0.2 build outputs. Generated `dist/` archives, `catalog.json`, and staged `worlds/tome` directories remain ignored. Archive versions and SHA-256 hashes are recorded in `VALIDATION_REPORT.md`; there is no repository-root `SHA256SUMS.json`. The canonical release build process is documented in `INSTALL.md`.

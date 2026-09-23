@@ -1,7 +1,6 @@
-\
-# 1.0 documentation audit summary
+# Historical 1.0 documentation audit
 
-This overlay was prepared against GitHub `main` at `a9d1753` plus the already-tested final mailbox/path source.
+This record describes the 1.0 documentation overlay prepared against GitHub `main` at `a9d1753` plus the then-tested mailbox/path source. It is retained for history. For current setup, use the [README](README.md), [installation guide](docs/INSTALL.md), and [1.0.2 validation report](docs/VALIDATION_REPORT.md).
 
 ## Updated for 1.0
 
@@ -14,10 +13,6 @@ This overlay was prepared against GitHub `main` at `a9d1753` plus the already-te
 - Historical 0.2.x beta notes retained as historical documents.
 - Stale Lua mailbox test paths and client mailbox-marker tests updated to match schema 2 and `/archipelago`.
 
-## Release hygiene still to do
+## Later resolution
 
-- Delete the obsolete repository-root `tome_mailbox_validation_fixed.patch` before tagging.
-- Rebuild/replace any tracked old release binary (`release/tome-archipelago.teaa`) from the final 1.0 source, or remove tracked build artifacts and attach them only to the GitHub release.
-- Regenerate `SHA256SUMS.json` after all final source/doc changes and release-artifact decisions.
-- Build the final APWorld from a fresh schema-2 runtime export produced by the 1.0 addon and package it with Archipelago 0.6.7.
-- Run the final tests again after applying this overlay.
+The obsolete patch is absent from the current repository. Both tracked release archives were replaced for 1.0.2 from matching source. The APWorld was compiled from a fresh schema-2 ToME 1.7.6 export and packaged with Archipelago 0.6.7. The source and native APWorld tests passed; artifact hashes are recorded in the [1.0.2 validation report](docs/VALIDATION_REPORT.md). There is no current `SHA256SUMS.json`; the earlier instruction to regenerate it is superseded by that report.

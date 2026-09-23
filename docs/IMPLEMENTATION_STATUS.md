@@ -2,7 +2,7 @@
 
 ## Release status
 
-**1.0.2 is feature-complete for the current design but only partially qualified.** It is the first release intended to be usable as a normal Archipelago integration, not a claim that every ToME build, DLC combination, optional check family, or full campaign has been exhaustively tested.
+**1.0.2 is the current release and feature-complete for the present design, with further live qualification needed.** The matching addon and APWorld are in [`release/`](../release/). The release build passed 231 Python/Lua tests, 34 native Archipelago tests, archive integrity checks, and staged-source comparisons. These checks do not establish that every ToME build, DLC combination, optional check family, or full campaign works in live play.
 
 Core end-to-end behavior has been exercised in the real game: the client bound to a generated slot, two precollected starter ranks arrived, ToME created `game.json`, level and Trollmire zone checks accumulated while the client was disconnected, and reconnecting sent the pending checks and resumed reward delivery.
 
@@ -13,7 +13,7 @@ Core end-to-end behavior has been exercised in the real game: the client bound t
 | Runtime catalog | Schema-2 installed player-tree export with real IDs/caps/resources/prodigies | Regenerate/inspect for each release content set |
 | Starters | 0–2 precollected likely offensive talent ranks | More edge-case starter categories |
 | Dependency protection | Catalog-v4 exact dependencies, reusable capabilities, support trees, and same-tree anchors | Continued audit for obscure callback/equipment dependencies |
-| Resources | One-time runtime resource initialization; non-refilling reconciliation; legacy-save adoption | Every unusual resource combination |
+| Resources | One-time initialization; resource bars appear when a using talent is learned; non-refilling reconciliation; legacy-save adoption | Every unusual resource combination and display layout |
 | Prodigies | Broad runtime prodigy pool; bonus-tree expansion; pending ranks | Every evolution/native callback |
 | Stats | Named +5 packages; no discretionary AP stat points | Permanent native stat-effect interactions |
 | Equipment | AP-scoped eligibility bypass; native slot/inventory constraints remain | Unusual equipment systems |
@@ -21,7 +21,7 @@ Core end-to-end behavior has been exercised in the real game: the client bound t
 | Boss checks | 16 additive observers | Every alternate guardian and native loot regression |
 | Zone checks | 18 configurable zone-entry observers | Full manifest smoke pass |
 | Quest checks | 7 major + 4 T2 objectives configurable | Full manifest smoke pass |
-| Shop checks | 42 merchants, 1–3 parcels/store, scouted item/recipient display | Broad purchase/restock/price tests |
+| Shop checks | 42 merchants, 1–3 parcels/store, scouted item/recipient display, purchase-time recheck and failed-recording refund | Broad purchase/restock/price tests |
 | Advancement checks | Dynamic remainder distributed over levels | Pacing across very small/large builds |
 | Victory | Native victory + remaining advancement fallback | Full real campaign completion |
 | Mailbox | `/archipelago`, schema-2 marker, validated cached path | Other OS/profile layouts |
@@ -39,7 +39,7 @@ Core end-to-end behavior has been exercised in the real game: the client bound t
 - Some prodigy/evolution and resource combinations are expected to be strange even when mechanically valid.
 - The optional developer network-isolation tools remain in the repository, but the runtime no longer requires or reads an offline-policy acknowledgement.
 
-## Post-1.0 qualification backlog
+## Qualification backlog after 1.0.2
 
 1. Complete one or more full Age of Ascendancy campaigns on generated builds.
 2. Exercise every fixed boss, zone, and quest observer in real ToME.

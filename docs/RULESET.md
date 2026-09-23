@@ -15,7 +15,7 @@ The generated ToME item types are:
 - Specific prodigies named `Prodigy: <Prodigy name>`.
 - `Vitality: +1 maximum life` exists as the AP filler/admin fallback but is not manufactured by normal ToME build accounting.
 
-Ten copies of each stat package are used by the current 1.0 world. Five distinct prodigies are selected by default.
+Ten copies of each stat package are used by the current 1.0.2 world. Five distinct prodigies are selected by default.
 
 ## Starters and dependency protection
 
@@ -26,6 +26,8 @@ Catalog schema 4 separates three dependency concepts so randomized categories do
 - **Exact support dependencies** require one specific category/talent, such as Psiblades for blade categories that directly depend on it.
 - **Functional capabilities** describe a mechanic rather than a specific class pairing. A dependent tree first reuses a provider that was already rolled and available at birth; if none exists, the reviewed fallback provider becomes a support category. The provider's enabling rank is precollected once. Examples include Shadows, summon creation, combo generation, a bindable Chronomancy spell, alchemist-gem creation, Insanity generation, entropic backlash, undead minions, and an Alchemist Golem.
 - **Anchor talents** are same-tree bootstraps. Their reviewed number of paid ranks stays in the shuffled pool and is requested through Archipelago's multiworld `early_items` pool, for example Call Shadows, Temporal Hounds, Prophecy, Thought-Forms, or Golem Power. Combat Training requests two ranks each of four weapon skills. They may be placed in another player's early checks. External hard dependencies and normal starter ranks count toward the requested quantity. Early placement improves pacing but does not force those ranks to be the first talents received from their tree.
+
+Only the requested copies receive early-placement restrictions during Archipelago's early pass. Remaining copies of the same talent can fill later checks. Generation excludes priority boss checks when calculating capacity for these useful items and extends the early advancement cutoff if needed.
 
 Support categories do not consume the configured random class/generic counts. Their remaining ranks are ordinary shuffled items. Dependency resolution is transitive and duplicate free ranks collapse to one copy. If a prodigy-gated category is the only apparent provider, it does not count as ready at birth; the resolver uses/promotes a provider that is actually available when the dependent tree is available.
 
@@ -79,6 +81,8 @@ Quest checks watch deterministic native quest state/sub-state transitions. Choic
 
 Paid shop parcels are optional gold sinks. Their Archipelago item rule forbids `item.advancement`, so logical progression from **any world** cannot be hidden behind the ToME gold economy. Useful/filler/trap items are legal. The merchant shows the scouted item and recipient before purchase.
 
+The purchase path checks availability again at confirmation, refunds gold if recording fails, and reconciles server-confirmed shop checks after loading an older save.
+
 ### Victory
 
 Native Age of Ascendancy victory checks `Age of Ascendancy — Victory` and also marks any remaining **advancement** locations complete as a safety fallback. It does not fabricate uncompleted boss, zone, quest, or shop checks. AP generation uses a separate internal completion event, with no network ID, so the item shuffled onto the visible Victory check cannot determine whether the generator recognizes completion.
@@ -98,6 +102,8 @@ The addon can continue recording local checks in `game.json` while the AP client
 ## Resources and requirements
 
 Talent, prodigy, and equipment eligibility requirements are bypassed where needed for the AP character. When selected categories use a ToME resource, the addon enables the resource's native pool plumbing and applies the initial resource/regeneration policy once. Later render-loop reconciliation does not refill spent resources or reapply that policy.
+
+The Classic and Minimalist resource displays show a resource once the character learns a talent that uses it. The underlying resource infrastructure can already be active to support the selected build.
 
 Normal inventory/slot constraints remain.
 

@@ -1,13 +1,39 @@
 {
-  "version": "1.0.0",
+  "version": "1.0.2",
+  "validated_at": "2026-09-23",
   "pytest": {
-    "passed": 110,
-    "skipped": 1,
+    "passed": 231,
+    "skipped": 0,
     "failed": 0,
-    "context": "RC2 source baseline with final mailbox/path changes overlaid",
-    "skip_reason": "Optional Lupa package unavailable for Lua execution tests"
+    "context": "final 1.0.2 source with Lupa present"
   },
   "compileall": "pass",
+  "runtime_export": {
+    "schema": 2,
+    "game_version": "1.7.6",
+    "steam_possessor_content": true,
+    "runtime_trees": 381,
+    "talents": 1882,
+    "player_trees": 276
+  },
+  "native_archipelago_world_tests": {
+    "passed": 34,
+    "ap_version": "0.6.7",
+    "context": "fresh schema-2 ToME 1.7.6 export staged as the ToME APWorld"
+  },
+  "catalog": {
+    "schema": 4,
+    "trees": 291,
+    "item_types": 1232,
+    "prodigies": 62,
+    "hash": "9dbd4427fd52f248212581f75c8c5695f895fc66d54a93cf40ed2ed5249c4e3f"
+  },
+  "release_artifacts": {
+    "tome-archipelago.teaa_sha256": "955550dd4db888a63a6b13254f1b169e50a164f2541f8bd3a28078391dfa7ff7",
+    "tome.apworld_sha256": "010f245d876b934afd88242f6138e9d6b83b58273247530123393413048e11fe",
+    "zip_integrity": "pass",
+    "staged_source_comparison": "pass"
+  },
   "real_tome_core_transport": {
     "mailbox_root": "pass (/archipelago -> .../T-Engine/4.0/tome/archipelago)",
     "starter_receipts": "pass (2 ranks observed)",
@@ -18,5 +44,5 @@
   "full_campaign": "not_qualified",
   "all_fixed_location_observers": "not_qualified",
   "broad_shared_multiworld": "not_qualified",
-  "upstream_apworld_tests": "not_run_in_this_environment"
+  "upstream_apworld_tests": "pass (34 native ToME tests)"
 }
