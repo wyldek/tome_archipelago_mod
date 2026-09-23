@@ -135,11 +135,11 @@ rank copies from random class categories
 + rank copies from random generic categories
 + rank copies from mandatory Combat Training
 + rank copies from selected prodigy-added categories
-+ rank copies from dependency support categories
++ rank copies from dependency/capability support categories
 + 60 named +5 stat packages
 + selected prodigies
 - precollected starter ranks
-- precollected dependency ranks
+- precollected dependency/anchor ranks
 = shuffled item count
 = active location count
 ```

@@ -1,9 +1,9 @@
-\
 # Source file inventory
 
 The release source is organized as follows. Generated `dist/`, local runtime exports/catalogs, virtual environments, caches, logs, and save files are intentionally ignored by Git.
 
 ```text
+.github/workflows/tests.yml
 README.md
 LICENSE
 ToMEClient.py
@@ -52,7 +52,6 @@ profiles/
 examples/
   wyldek.yaml
   Large_Build.yaml
-  Readiness_Test.yaml
 
 tools/
   __init__.py
@@ -63,30 +62,43 @@ tools/
   install_addon.py
   local_demo.py
   status.py
+  validate.py
   windows_offline.ps1
 
 tests/
   __init__.py
+  _lua_exec.py
+  conftest.py
   factories.py
+  lua/engine.lua
   test_antimagic_compat.py
   test_baseline_utilities.py
+  test_catalog_optional_content.py
   test_client_launch.py
   test_client_scouts.py
+  test_dependency_capabilities.py
+  test_dependency_profile.py
   test_generation.py
   test_local_demo_seed.py
   test_lua.py
   test_mailbox.py
   test_readiness.py
   test_receipts.py
+  test_release_validation.py
+  test_review_runtime.py
+  test_review_world_contract.py
   test_vanilla_rewards.py
 
 docs/
   1.0.0_RELEASE_NOTES.md
+  1.0.2_RELEASE_NOTES.md
   ARCHITECTURE.md
   CONFIGURATION_REFERENCE.md
+  DEPENDENCY_MODEL.md
   FILE_INVENTORY.md
   IMPLEMENTATION_STATUS.md
   INSTALL.md
+  REVIEW_FIXES.md
   RULESET.md
   SOURCES.md
   TESTING.md

@@ -17,6 +17,7 @@ from .model import (
 
 SYMBOL = re.compile(r"^T_[A-Z0-9_]+$")
 TREE_KEY = re.compile(r"^[a-z0-9][a-z0-9_'-]*/[a-z0-9][a-z0-9_'-]*$")
+CAPABILITY = re.compile(r"^[a-z][a-z0-9_]*$")
 
 @dataclass(frozen=True)
 class ItemDef:
@@ -58,6 +59,43 @@ class SupportDependency:
         }
 
 @dataclass(frozen=True)
+class CapabilityProvider:
+    capability: str
+    tree: str
+    required_talents: tuple[str, ...] = ()
+    fallback: bool = False
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "capability": self.capability,
+            "tree": self.tree,
+            "required_talents": list(self.required_talents),
+            "fallback": self.fallback,
+        }
+
+@dataclass(frozen=True)
+class FunctionalDependency:
+    source_tree: str
+    capabilities: tuple[str, ...]
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "source_tree": self.source_tree,
+            "capabilities": list(self.capabilities),
+        }
+
+@dataclass(frozen=True)
+class AnchorRule:
+    source_tree: str
+    required_talents: tuple[str, ...]
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "source_tree": self.source_tree,
+            "required_talents": list(self.required_talents),
+        }
+
+@dataclass(frozen=True)
 class ProdigyRule:
     item_key: str
     bonus_trees: tuple[str, ...] = ()
@@ -91,6 +129,9 @@ class Catalog:
         self.prodigies: list[ItemDef] = []
         self.prodigy_rules: dict[str, ProdigyRule] = {}
         self.support_dependencies: dict[str, list[SupportDependency]] = {}
+        self.capability_providers: dict[str, list[CapabilityProvider]] = {}
+        self.functional_dependencies: dict[str, tuple[str, ...]] = {}
+        self.anchor_talents: dict[str, tuple[str, ...]] = {}
         self.mandatory_trees = tuple(data.get("mandatory_trees", []))
 
         for raw in data["items"]:
@@ -174,6 +215,94 @@ class Catalog:
                 raise ValidationError(f"Duplicate support dependency for {dep.source_tree}")
             bucket.append(dep)
 
+        provider_seen: set[tuple[str, str, tuple[str, ...]]] = set()
+        fallback_counts: dict[str, int] = {}
+        for raw in data.get("capability_providers", []):
+            raw = dict(raw)
+            raw["required_talents"] = tuple(raw.get("required_talents", []))
+            provider = CapabilityProvider(**raw)
+            if type(provider.fallback) is not bool:
+                raise ValidationError(
+                    f"Capability {provider.capability} provider fallback flag must be boolean"
+                )
+            if not CAPABILITY.fullmatch(provider.capability):
+                raise ValidationError(f"Invalid capability name {provider.capability!r}")
+            if provider.tree not in self.trees:
+                raise ValidationError(
+                    f"Capability {provider.capability} provider tree missing: {provider.tree}"
+                )
+            if not provider.required_talents:
+                raise ValidationError(
+                    f"Capability {provider.capability} provider has no enabling talent: {provider.tree}"
+                )
+            for sym in provider.required_talents:
+                if not SYMBOL.fullmatch(sym):
+                    raise ValidationError(f"Invalid capability provider talent symbol: {sym}")
+                item = self.items.get("talent:" + sym)
+                if not item or item.tree != provider.tree:
+                    raise ValidationError(
+                        f"Capability {provider.capability} requires {sym}, "
+                        f"but it is not owned by {provider.tree}"
+                    )
+            key = (provider.capability, provider.tree, provider.required_talents)
+            if key in provider_seen:
+                raise ValidationError(
+                    f"Duplicate provider for capability {provider.capability}: {provider.tree}"
+                )
+            provider_seen.add(key)
+            self.capability_providers.setdefault(provider.capability, []).append(provider)
+            if provider.fallback:
+                fallback_counts[provider.capability] = fallback_counts.get(provider.capability, 0) + 1
+
+        for raw in data.get("functional_dependencies", []):
+            raw = dict(raw)
+            raw["capabilities"] = tuple(raw.get("capabilities", []))
+            dep = FunctionalDependency(**raw)
+            if dep.source_tree not in self.trees:
+                raise ValidationError(
+                    f"Functional dependency source tree missing: {dep.source_tree}"
+                )
+            if dep.source_tree in self.functional_dependencies or not dep.capabilities:
+                raise ValidationError(
+                    f"Invalid/duplicate functional dependency for {dep.source_tree}"
+                )
+            if len(dep.capabilities) != len(set(dep.capabilities)):
+                raise ValidationError(
+                    f"Duplicate capability requirement for {dep.source_tree}"
+                )
+            for capability in dep.capabilities:
+                if not CAPABILITY.fullmatch(capability):
+                    raise ValidationError(f"Invalid capability name {capability!r}")
+                providers = self.capability_providers.get(capability, [])
+                if not providers:
+                    raise ValidationError(
+                        f"Functional dependency {dep.source_tree} has no provider for {capability}"
+                    )
+                if fallback_counts.get(capability, 0) != 1:
+                    raise ValidationError(
+                        f"Capability {capability} must have exactly one fallback provider"
+                    )
+            self.functional_dependencies[dep.source_tree] = dep.capabilities
+
+        for raw in data.get("anchor_talents", []):
+            raw = dict(raw)
+            raw["required_talents"] = tuple(raw.get("required_talents", []))
+            anchor = AnchorRule(**raw)
+            if anchor.source_tree not in self.trees or anchor.source_tree in self.anchor_talents:
+                raise ValidationError(f"Invalid/duplicate anchor rule {anchor.source_tree}")
+            if not anchor.required_talents:
+                raise ValidationError(f"Anchor rule has no talent: {anchor.source_tree}")
+            for sym in anchor.required_talents:
+                if not SYMBOL.fullmatch(sym):
+                    raise ValidationError(f"Invalid anchor talent symbol: {sym}")
+                item = self.items.get("talent:" + sym)
+                if not item or item.tree != anchor.source_tree:
+                    raise ValidationError(
+                        f"Anchor {anchor.source_tree} requires {sym}, "
+                        "but the talent is not owned by that tree"
+                    )
+            self.anchor_talents[anchor.source_tree] = anchor.required_talents
+
         for key in STAT_KEYS:
             if "stat:" + key not in self.items:
                 raise ValidationError("Catalog must include all six stat packages")
@@ -245,6 +374,15 @@ def compile_catalog(export: dict[str, Any], profile: dict[str, Any]) -> Catalog:
     support_policy = profile.get("support_dependencies", {})
     if not isinstance(support_policy, dict):
         raise ValidationError("support_dependencies must be an object keyed by source tree")
+    capability_policy = profile.get("capabilities", {})
+    if not isinstance(capability_policy, dict):
+        raise ValidationError("capabilities must be an object keyed by capability name")
+    functional_policy = profile.get("functional_dependencies", {})
+    if not isinstance(functional_policy, dict):
+        raise ValidationError("functional_dependencies must be an object keyed by source tree")
+    anchor_policy = profile.get("anchor_talents", {})
+    if not isinstance(anchor_policy, dict):
+        raise ValidationError("anchor_talents must be an object keyed by source tree")
 
     wanted = {key for key in player_tree_keys if key not in excluded_trees}
     wanted.update(mandatory_trees)
@@ -255,6 +393,26 @@ def compile_catalog(export: dict[str, Any], profile: dict[str, Any]) -> Catalog:
             wanted.add(tree)
         for tree in rule.get("cleanup_trees", []):
             wanted.add(tree)
+
+    # Capability providers may be helper categories not present in player_trees.
+    # Include every installed provider so generation can prefer an already rolled
+    # provider and fall back deterministically when necessary. Missing optional
+    # DLC providers are ignored unless an installed source tree has no fallback.
+    for capability, spec in capability_policy.items():
+        if not CAPABILITY.fullmatch(capability) or not isinstance(spec, dict):
+            raise ValidationError(f"Invalid capability policy {capability!r}")
+        providers = spec.get("providers", [])
+        if not isinstance(providers, list) or not providers:
+            raise ValidationError(f"Capability {capability} must define providers")
+        for raw in providers:
+            if not isinstance(raw, dict) or not isinstance(raw.get("tree"), str):
+                raise ValidationError(f"Invalid provider for capability {capability}")
+            if "fallback" in raw and type(raw["fallback"]) is not bool:
+                raise ValidationError(
+                    f"Capability {capability} provider fallback flag must be boolean"
+                )
+            if raw["tree"] in available and raw["tree"] not in excluded_trees:
+                wanted.add(raw["tree"])
 
     # Support dependencies are transitive: a support tree may itself need
     # another enabling tree/rank. Only dependencies reachable from an active
@@ -368,6 +526,67 @@ def compile_catalog(export: dict[str, Any], profile: dict[str, Any]) -> Catalog:
                 required_talents=required_talents,
             ).to_dict())
 
+    capability_rules: list[dict[str, Any]] = []
+    available_capabilities: set[str] = set()
+    for capability, spec in capability_policy.items():
+        compiled_for_capability = []
+        for raw in spec.get("providers", []):
+            tree = raw["tree"]
+            if tree not in wanted or tree not in available:
+                continue
+            required_talents = tuple(raw.get("talents", []))
+            if not required_talents:
+                raise ValidationError(
+                    f"Capability {capability} provider {tree} has no enabling talent"
+                )
+            owner_symbols = set(available[tree].get("symbols", []))
+            for sym in required_talents:
+                if sym not in owner_symbols:
+                    raise ValidationError(
+                        f"Capability {capability} provider {tree} requires {sym}, "
+                        "but the runtime tree does not contain it"
+                    )
+            provider = CapabilityProvider(
+                capability=capability, tree=tree, required_talents=required_talents,
+                fallback=raw.get("fallback", False),
+            )
+            capability_rules.append(provider.to_dict())
+            compiled_for_capability.append(provider)
+        if compiled_for_capability:
+            available_capabilities.add(capability)
+
+    functional_rules: list[dict[str, Any]] = []
+    for source_tree, capabilities in sorted(functional_policy.items()):
+        if source_tree not in wanted:
+            continue
+        if not isinstance(capabilities, list) or not capabilities:
+            raise ValidationError(f"Functional dependency list expected for {source_tree}")
+        missing_caps = [c for c in capabilities if c not in available_capabilities]
+        if missing_caps:
+            raise ValidationError(
+                f"Functional dependency {source_tree} has unavailable capabilities: "
+                + ", ".join(missing_caps)
+            )
+        functional_rules.append(FunctionalDependency(
+            source_tree=source_tree, capabilities=tuple(capabilities),
+        ).to_dict())
+
+    anchor_rules: list[dict[str, Any]] = []
+    for source_tree, symbols in sorted(anchor_policy.items()):
+        if source_tree not in wanted:
+            continue
+        if not isinstance(symbols, list) or not symbols:
+            raise ValidationError(f"Anchor talent list expected for {source_tree}")
+        owner_symbols = set(available[source_tree].get("symbols", []))
+        for sym in symbols:
+            if sym not in owner_symbols:
+                raise ValidationError(
+                    f"Anchor {source_tree} requires {sym}, but the runtime tree does not contain it"
+                )
+        anchor_rules.append(AnchorRule(
+            source_tree=source_tree, required_talents=tuple(symbols),
+        ).to_dict())
+
     for stat, name in zip(STAT_KEYS, STAT_NAMES):
         key = "stat:" + stat
         item_defs.append(ItemDef(
@@ -386,5 +605,8 @@ def compile_catalog(export: dict[str, Any], profile: dict[str, Any]) -> Catalog:
         trees=tree_defs,
         prodigy_rules=rules,
         support_dependencies=support_rules,
+        capability_providers=capability_rules,
+        functional_dependencies=functional_rules,
+        anchor_talents=anchor_rules,
         items=sorted(item_defs, key=lambda i: i["key"]),
     ))

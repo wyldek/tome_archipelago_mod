@@ -7,7 +7,8 @@ from Fill import distribute_items_restrictive
 from test.general import gen_steps
 from worlds.AutoWorld import call_all
 
-from .. import COMPLETION_EVENT, COMPLETION_LOCATION, ToMEItem, ToMEWorld
+from .. import CATALOG, COMPLETION_EVENT, COMPLETION_LOCATION, ToMEItem, ToMEWorld
+from ..core.model import CATALOG_VERSION, CONTRACT_VERSION
 from .bases import ToMETestBase
 
 
@@ -22,6 +23,16 @@ class TestDefaultWorld(ToMETestBase):
         self.assertEqual(len(self.world.build.pool), len(self.world.build.locations))
         network_locations = [loc for loc in self.multiworld.get_locations() if loc.address is not None]
         self.assertEqual(len(network_locations), len(self.world.build.pool))
+
+    def test_catalog_v4_contract_v3_boundary(self):
+        self.assertEqual(CATALOG.data["schema"], CATALOG_VERSION)
+        self.assertEqual(CATALOG_VERSION, 4)
+        contract = self.world.fill_slot_data()
+        self.assertEqual(contract["schema"], CONTRACT_VERSION)
+        self.assertEqual(CONTRACT_VERSION, 3)
+        self.assertNotIn("capability_providers", contract)
+        self.assertNotIn("functional_dependencies", contract)
+        self.assertNotIn("anchor_talents", contract)
 
 
 class TestSmallWorld(ToMETestBase):

@@ -94,6 +94,10 @@ Player-facing talent categories are exported dynamically from the installed ToME
 
 A release builder should install the current addon, launch ToME to regenerate the export, then build against the pinned Archipelago 0.6.7 source checkout. This keeps the APWorld catalog aligned with the addon and installed content set.
 
+### Catalog v4 dependency policy
+
+Catalog schema 4 adds generation-only `capability_providers`, `functional_dependencies`, and `anchor_talents`. They are deliberately not copied into slot data. Generation resolves them into concrete support categories and precollected talent ranks before the contract is built. The network/runtime boundary therefore remains contract schema 3, mailbox protocol 1, and character-state schema 3. A new APWorld rejects an old catalog file rather than silently ignoring v4 policy, while already-generated v3 contracts remain valid inputs to the client/addon.
+
 ## Resource initialization and old saves
 
 Each resource receives its native infrastructure and initial AP resource policy once, tracked by a saved `resources_initialized` map. Routine category reconciliation does not refill resources or repeatedly reapply regeneration floors. Existing schema-3 saves without this map adopt the resources used by their selected, extra, or already-known categories without changing current resource values, maxima, regeneration, or the applied receipt cursor. An unseen resource introduced later still initializes once.

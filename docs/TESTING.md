@@ -9,7 +9,7 @@ python -m pip install -e ".[test]"
 python tools/validate.py
 ```
 
-The Python suite checks deterministic generation, cap-based budgets, stable IDs, option combinations, location allocation, receipt ordering, duplicate copies, wrong-slot rejection, JSON/mailbox validation, and static addon behavior.
+The Python suite checks deterministic generation, cap-based budgets, stable IDs, option combinations, dependency capabilities/anchors, location allocation, receipt ordering, duplicate copies, wrong-slot rejection, JSON/mailbox validation, and static addon behavior.
 
 `tests/test_lua.py` uses Lupa to execute the real Lua addon against `tests/lua/engine.lua`, a deliberately small fake engine. Plain developer pytest runs may skip this module without Lupa, but `tools/validate.py`, release packaging, and CI require Lupa and refuse that skip. Additional runtime regressions in `tests/test_review_runtime.py` can also execute through a real local Lua 5.4 shared library during restricted development. Fake-engine execution does not certify native T-Engine callback ordering, serialization, or talent side effects.
 

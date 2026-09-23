@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tome-archipelago-tools"
-version = "1.0.0"
+version = "1.0.2"
 description = "ToME Archipelago addon, APWorld, and filesystem bridge"
 requires-python = ">=3.11,<3.14"
 license = {text = "MIT"}

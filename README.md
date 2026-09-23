@@ -1,8 +1,6 @@
 # Tales of Maj'Eyal — Archipelago integration
 
-**Unreleased source fixes:** This source includes the review corrections described in [Review fixes](docs/REVIEW_FIXES.md). Previously published 1.0.0 binaries do not contain these changes; rebuild both artifacts before distributing the corrected integration.
-
-**Version 1.0.0.** This is the first feature-complete release of the integration for **Tales of Maj'Eyal 1.7.6** and **Archipelago 0.6.7**. Core item/check transport, starter-item delivery, level/zone checks, disconnected check accumulation, and reconnect catch-up have been smoke-tested in the real game. Full-campaign coverage, every prodigy/resource combination, and broad shared-multiworld qualification are still limited; see [Implementation status](docs/IMPLEMENTATION_STATUS.md).
+**Version 1.0.2.** This release uses catalog schema 4 dependency protection while keeping contract schema 3 and mailbox protocol 1 for compatibility with existing generated seeds. Core item/check transport, starter-item delivery, level/zone checks, disconnected check accumulation, and reconnect catch-up have been smoke-tested in the real game. Full-campaign coverage, every prodigy/resource combination, and broad shared-multiworld qualification are still limited; see [Implementation status](docs/IMPLEMENTATION_STATUS.md).
 
 The integration has three parts:
 
@@ -43,7 +41,7 @@ A normal seed selects a character build rather than randomizing ToME's native lo
 - 10 copies of each named `+5` primary-stat package;
 - 2 precollected starter talent ranks.
 
-Prodigies can add additional AP-managed categories, and hard talent dependencies can add support categories plus a minimum enabling rank. Native gear, artifacts, gold, XP, consumables, inscriptions, crafting, ordinary drops, and normal campaign maps remain ToME systems.
+Prodigies can add additional AP-managed categories. Reviewed dependencies can add support categories, functional-mechanic providers, and same-tree anchor ranks so a rolled category is not left without the mechanic it operates on. Native gear, artifacts, gold, XP, consumables, inscriptions, crafting, ordinary drops, and normal campaign maps remain ToME systems.
 
 ## ToME items in the Archipelago pool
 
@@ -57,7 +55,7 @@ Prodigies can add additional AP-managed categories, and hard talent dependencies
 Precollected ranks are real AP items but are removed from the shuffled pool before placement:
 
 - `starting_ranks` precollects 0–2 likely offensive starter ranks. Starter selection is a metadata heuristic, not a guarantee that every equipment/resource combination is immediately usable. With the default value of 2, both ranks normally go into the same starter talent when its cap permits it; otherwise a second starter can be used.
-- A hard dependency may precollect one enabling talent rank from a support category. The remaining ranks in that support category are normal shuffled items.
+- Dependency protection may precollect an enabling rank from a support category or an anchor rank from the selected category itself. Functional requirements reuse an already-rolled provider when possible and only add the reviewed fallback tree when necessary. Remaining ranks are normal shuffled items.
 
 The item pool is therefore based on the exact runtime catalog:
 
@@ -69,12 +67,12 @@ all rank copies in selected random trees
 + 10 x each of the six +5 stat packages
 + selected prodigies
 - precollected starter ranks
-- precollected dependency ranks
+- precollected dependency/anchor ranks
 = shuffled ToME items
 = active ToME locations
 ```
 
-For the illustrative common case of ten ordinary four-talent/5-rank random trees, Combat Training's seven 5-rank talents, 60 stat packages, 5 prodigies, and 2 starter ranks, the result is **298 shuffled items/checks**. Real seeds can differ because category sizes/caps, support dependencies, and prodigy-added categories come from the runtime export.
+For the illustrative common case of ten ordinary four-talent/5-rank random trees, Combat Training's seven 5-rank talents, 60 stat packages, 5 prodigies, and 2 starter ranks, the result is **298 shuffled items/checks**. Real seeds can differ because category sizes/caps, dependency support/anchor rules, and prodigy-added categories come from the runtime catalog.
 
 ## What counts as a ToME check
 
@@ -218,7 +216,7 @@ That produces/stages the compiled catalog and copies the officially packaged `to
 
 ## Current qualification level
 
-1.0.0 is intended as the first usable, feature-complete release of the current design, not a claim that every ToME combination has been exhaustively tested. Core bridge transport and reconnect behavior have been exercised in the real game. The remaining qualification backlog includes full campaigns, broad multiworld play, every optional location family, every installed-DLC/prodigy/resource combination, and crash/save edge cases.
+1.0.2 is the current feature-complete release of the design, not a claim that every ToME combination has been exhaustively tested. Core bridge transport and reconnect behavior have been exercised in the real game. The remaining qualification backlog includes full campaigns, broad multiworld play, every optional location family, every installed-DLC/prodigy/resource combination, and crash/save edge cases.
 
 Do not enable this addon alongside Rosen's ToME Archipelago addon. Both declare the internal addon name `archipelago`, but they implement different clients, item models, and seed contracts.
 
@@ -228,11 +226,13 @@ Do not enable this addon alongside Rosen's ToME Archipelago addon. Both declare 
 - [Installation and source build](docs/INSTALL.md)
 - [Configuration reference](docs/CONFIGURATION_REFERENCE.md)
 - [Ruleset](docs/RULESET.md)
+- [Dependency model](docs/DEPENDENCY_MODEL.md)
 - [Architecture and recovery](docs/ARCHITECTURE.md)
 - [Implementation status](docs/IMPLEMENTATION_STATUS.md)
 - [Testing](docs/TESTING.md)
 - [Validation report](docs/VALIDATION_REPORT.md)
 - [Tool reference](docs/TOOL_REFERENCE.md)
+- [1.0.2 release notes](docs/1.0.2_RELEASE_NOTES.md)
 - [1.0.0 release notes](docs/1.0.0_RELEASE_NOTES.md)
 
 Historical `0.2.x` beta notes are retained under `docs/` as historical records and should not be treated as current setup instructions.

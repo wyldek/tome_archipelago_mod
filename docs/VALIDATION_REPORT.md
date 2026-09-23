@@ -1,14 +1,14 @@
-\
-# Validation report — 1.0.0 release preparation
+# Validation report — 1.0.2 dependency update
 
-This report records what has actually been exercised for the 1.0 source line. It does **not** claim exhaustive full-campaign or broad shared-multiworld qualification.
+This report records what was actually exercised for the 1.0.2 dependency-model update. It does **not** claim exhaustive full-campaign qualification, every DLC/content combination, or broad shared-multiworld qualification.
 
-## Automated baseline
+## Automated source results
 
-Using the RC2 source baseline with the final mailbox/path changes overlaid, the current standalone suite produced:
+From the 1.0.2 source tree:
 
 ```text
-110 passed, 1 skipped
+python -m pytest -q -rs
+182 passed, 1 skipped
 ```
 
 and:
@@ -19,38 +19,69 @@ python -m compileall -q tome_ap apworld tools tests ToMEClient.py
 
 completed successfully.
 
-The one skipped module is the optional Lupa-backed Lua execution suite when Lupa is unavailable. Historical test counts in older 0.2.x notes are not the current release baseline.
+The skipped module is the Lupa-backed Lua execution suite because Lupa is not installed in this build environment. The release-validation workflow and `tools/validate.py` require Lupa when run in the documented release environment.
 
-## Real-game transport smoke test
+## Catalog-v4 dependency validation
 
-The final mailbox design was exercised with real ToME 1.7.6 and an Archipelago 0.6.7-hosted seed:
+The dependency policy was compiled against the same 291-tree / 1,232-item runtime content represented by the 1.0.1 release catalog. The v4 catalog preserves the existing tree definitions, item definitions/IDs, prodigy definitions, and prodigy rules while adding dependency metadata.
 
-- the addon wrote to the physical `...\T-Engine\4.0\tome\archipelago` mailbox using virtual root `/archipelago`;
-- `mailbox-info.json`, `runtime-export.json`, `client.json`, and `game.json` were present together;
-- the AP client successfully authenticated and bound to the generated seed/team/slot;
-- two precollected starter talent ranks were received by the ToME character;
-- ToME recorded level-2, level-3, and Trollmire zone checks in `game.json`;
-- while the AP client was disconnected, those checks remained local rather than being lost;
-- reconnecting the AP client sent the pending checks and reward delivery resumed.
+Validated catalog policy:
 
-This specifically validates the core bidirectional filesystem bridge and reconnect catch-up path that previously failed during development.
+- 34 capability-provider entries;
+- 11 functional dependency rules;
+- 18 same-tree anchor rules;
+- 2 remaining exact support-dependency rules.
 
-## Generator facts verified from current source
+A real-catalog generator sweep passed:
 
-- Boss manifest: 16 checks.
-- Zone-entry manifest: 18 checks when enabled.
-- Quest manifest: 7 major checks or 11 with the four Tier-2 zone objectives.
-- Shop manifest: 42 merchants and 1/2/3 parcels per store = 42/84/126 checks.
-- Victory: 1 check.
-- Default illustrative 298-item build with all fixed checks enabled leaves 126 advancement checks.
-- Fixed checks consume the existing reward budget; normal generation does not add Vitality filler merely to accommodate them.
-- Shop locations reject logical advancement from any world.
+- 1,000 default seeds;
+- 100 minimal/no-fixed-check seeds;
+- 100 small seeds;
+- 100 large seeds;
+- 100 maximum-tree/no-shop seeds;
+- 100 no-starter seeds.
 
-## Still not claimed
+For every generated build in that sweep, validation checked exact pool/location accounting, exported talent-cap accounting, anchor precollects, functional-provider availability, exact support dependencies, and the catalog-v4/contract-v3 boundary.
 
-- No broad full-campaign sample across random builds.
-- No exhaustive live test of every boss/zone/quest/shop observer.
-- No exhaustive prodigy/evolution/resource/support-tree matrix.
-- No broad crash/save-rollback torture test.
-- No claim that `readiness` proves combat solvability.
-- Upstream Archipelago `WorldTestBase` should still be run in the clean pinned checkout used to package the final release artifact.
+The eleven functional fallbacks were also forced individually and verified to select the reviewed fallback provider when no natural provider was ready.
+
+## Compatibility checks
+
+- Catalog schema is now **4**.
+- Generated contract/slot-data schema remains **3**.
+- Mailbox protocol remains **1**.
+- Character `archipelago_state` remains schema **3**.
+- Contract validation accepts a valid contract-v3 carrying a legacy catalog hash; it does not compare the server-provided contract against the currently bundled catalog hash.
+- Stable item definitions/IDs and tree definitions are unchanged from the 1.0.1 compiled catalog.
+
+Existing generated 1.0.x contracts are therefore not rewritten by 1.0.2. They remain self-contained and are accepted by the new client/runtime code, but they do not gain dependency repairs retroactively.
+
+## Final artifact checks
+
+The generated `.teaa` and `.apworld` pass ZIP integrity checks. The APWorld's packaged core files/catalog were compared against the staged source used for the build.
+
+Compared with the generated 1.0.1 artifacts:
+
+- the ToME `.teaa` changes only `init.lua` version metadata; dependency resolution itself is generation-side;
+- the APWorld changes the version manifest, catalog/generation/model core, compiled v4 catalog, dependency documentation, and embedded world regression test.
+
+The packaged catalog reports 291 trees, 1,232 item types, 62 prodigies, and catalog hash:
+
+```text
+32f30e7d211c880550240702d4e24a6052381fac2fb717989b1badf3b487fda8
+```
+
+## Historical real-game transport smoke test
+
+The 1.0 transport design was previously exercised with real ToME 1.7.6 and an Archipelago 0.6.7-hosted seed: seed/team/slot binding, precollected starter delivery, level and Trollmire zone checks, disconnected local check retention, reconnect submission, and resumed reward delivery all worked.
+
+That smoke test validates the transport path retained by 1.0.2. It is **not** a live-game test of every newly curated dependency relationship.
+
+## Still not claimed in this environment
+
+- The Lupa-backed Lua execution suite was not run here.
+- Upstream Archipelago `WorldTestBase` was not run here because a clean pinned Archipelago 0.6.7 checkout was not present.
+- The final APWorld was verified as a structurally valid package assembled from the tested staged world; the official Archipelago `Build APWorlds` command was not run in this environment.
+- No exhaustive full campaign was completed specifically on a 1.0.2 dependency-heavy seed.
+- No exhaustive live test of every boss/zone/quest/shop observer, prodigy/evolution/resource combination, or save/crash boundary is claimed.
+- Unrestricted logic still does not prove combat solvability.

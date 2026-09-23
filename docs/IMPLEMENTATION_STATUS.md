@@ -1,10 +1,8 @@
-# Implementation status — 1.0.0
-
-**Unreleased review patch:** See [Review fixes](REVIEW_FIXES.md) for code corrections and their local regression evidence. The real-game smoke test below describes the earlier 1.0.0 baseline, not a new in-game qualification of this patch. The published artifacts must be rebuilt.
+# Implementation status — 1.0.2
 
 ## Release status
 
-**1.0.0 is feature-complete for the current design but only partially qualified.** It is the first release intended to be usable as a normal Archipelago integration, not a claim that every ToME build, DLC combination, optional check family, or full campaign has been exhaustively tested.
+**1.0.2 is feature-complete for the current design but only partially qualified.** It is the first release intended to be usable as a normal Archipelago integration, not a claim that every ToME build, DLC combination, optional check family, or full campaign has been exhaustively tested.
 
 Core end-to-end behavior has been exercised in the real game: the client bound to a generated slot, two precollected starter ranks arrived, ToME created `game.json`, level and Trollmire zone checks accumulated while the client was disconnected, and reconnecting sent the pending checks and resumed reward delivery.
 
@@ -14,7 +12,7 @@ Core end-to-end behavior has been exercised in the real game: the client bound t
 | Mandatory tree | Combat Training added without consuming generic count | Broad real-build use |
 | Runtime catalog | Schema-2 installed player-tree export with real IDs/caps/resources/prodigies | Regenerate/inspect for each release content set |
 | Starters | 0–2 precollected likely offensive talent ranks | More edge-case starter categories |
-| Hard dependencies | Reviewed transitive support trees + precollected enabling ranks | Additional native prerequisite audits |
+| Dependency protection | Catalog-v4 exact dependencies, reusable capabilities, support trees, and same-tree anchors | Continued audit for obscure callback/equipment dependencies |
 | Resources | One-time runtime resource initialization; non-refilling reconciliation; legacy-save adoption | Every unusual resource combination |
 | Prodigies | Broad runtime prodigy pool; bonus-tree expansion; pending ranks | Every evolution/native callback |
 | Stats | Named +5 packages; no discretionary AP stat points | Permanent native stat-effect interactions |
@@ -47,6 +45,6 @@ Core end-to-end behavior has been exercised in the real game: the client bound t
 2. Exercise every fixed boss, zone, and quest observer in real ToME.
 3. Purchase shop parcels across all towns and test reconnect/restock edge cases.
 4. Run shared multiworlds where ToME holds another game's progression and another game holds ToME upgrades.
-5. Exercise prodigy-added categories and hard dependency support trees in live play.
+5. Exercise prodigy-added categories, capability fallbacks, anchors, and support trees in live play.
 6. Test death/restart, save rollback, process crash, and long bridge disconnect scenarios.
 7. Build/package in a clean Archipelago 0.6.7 checkout and run upstream APWorld tests for each release artifact.

@@ -4,7 +4,7 @@ The ToME Archipelago integration creates a seed-selected **Archipelago Adventure
 
 The configured random class/generic counts select player-facing talent categories from a runtime-generated catalog. Technique / Combat Training is always included as an additional mandatory category. Talent items are named `<Category>: <Talent>` and each received copy grants one raw rank. Stat items are named `+5 <Stat>`. Specific prodigies are named `Prodigy: <Name>`.
 
-Selected prodigies may add their own rankable categories. Hard talent dependencies can add support categories and precollect one enabling rank. Precollected ranks are removed from the shuffled item pool, so every shuffled ToME item still corresponds to exactly one active ToME location.
+Selected prodigies may add their own rankable categories. Reviewed dependency protection can add support categories and precollect enabling or same-tree anchor ranks. Functional dependencies prefer a compatible provider already present in the build before adding a fallback support category. Precollected ranks are removed from the shuffled item pool, so every shuffled ToME item still corresponds to exactly one active ToME location.
 
 Locations are a configurable mixture of:
 

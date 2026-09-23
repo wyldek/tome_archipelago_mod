@@ -91,46 +91,348 @@
           "T_PSIBLADES"
         ]
       }
+    ]
+  },
+  "capabilities": {
+    "shadow_source": {
+      "providers": [
+        {
+          "tree": "cursed/shadows",
+          "talents": [
+            "T_CALL_SHADOWS"
+          ],
+          "fallback": true
+        }
+      ]
+    },
+    "summon_source": {
+      "providers": [
+        {
+          "tree": "wild-gift/summon-melee",
+          "talents": [
+            "T_WAR_HOUND"
+          ]
+        },
+        {
+          "tree": "wild-gift/summon-distance",
+          "talents": [
+            "T_RITCH_FLAMESPITTER"
+          ]
+        },
+        {
+          "tree": "wild-gift/summon-utility",
+          "talents": [
+            "T_TURTLE"
+          ],
+          "fallback": true
+        }
+      ]
+    },
+    "chronomancy_spell": {
+      "providers": [
+        {
+          "tree": "chronomancy/blade-threading",
+          "talents": [
+            "T_WARP_BLADE"
+          ]
+        },
+        {
+          "tree": "chronomancy/bow-threading",
+          "talents": [
+            "T_ARROW_STITCHING"
+          ]
+        },
+        {
+          "tree": "chronomancy/chronomancy",
+          "talents": [
+            "T_PRECOGNITION"
+          ]
+        },
+        {
+          "tree": "chronomancy/energy",
+          "talents": [
+            "T_ENERGY_DECOMPOSITION"
+          ]
+        },
+        {
+          "tree": "chronomancy/flux",
+          "talents": [
+            "T_ATTENUATE"
+          ]
+        },
+        {
+          "tree": "chronomancy/gravity",
+          "talents": [
+            "T_REPULSION_BLAST"
+          ]
+        },
+        {
+          "tree": "chronomancy/guardian",
+          "talents": [
+            "T_WARDEN_S_FOCUS"
+          ]
+        },
+        {
+          "tree": "chronomancy/matter",
+          "talents": [
+            "T_DUST_TO_DUST"
+          ],
+          "fallback": true
+        },
+        {
+          "tree": "chronomancy/spacetime-folding",
+          "talents": [
+            "T_SPATIAL_TETHER"
+          ]
+        },
+        {
+          "tree": "chronomancy/spacetime-weaving",
+          "talents": [
+            "T_WORMHOLE"
+          ]
+        },
+        {
+          "tree": "chronomancy/speed-control",
+          "talents": [
+            "T_HASTE"
+          ]
+        },
+        {
+          "tree": "chronomancy/stasis",
+          "talents": [
+            "T_CHRONO_TIME_SHIELD"
+          ]
+        },
+        {
+          "tree": "chronomancy/temporal-combat",
+          "talents": [
+            "T_WEAPON_FOLDING"
+          ]
+        },
+        {
+          "tree": "chronomancy/threaded-combat",
+          "talents": [
+            "T_THREAD_WALK"
+          ]
+        },
+        {
+          "tree": "chronomancy/timeline-threading",
+          "talents": [
+            "T_RETHREAD"
+          ]
+        },
+        {
+          "tree": "chronomancy/timetravel",
+          "talents": [
+            "T_TEMPORAL_BOLT"
+          ]
+        }
+      ]
+    },
+    "combo_source": {
+      "providers": [
+        {
+          "tree": "technique/pugilism",
+          "talents": [
+            "T_DOUBLE_STRIKE"
+          ],
+          "fallback": true
+        }
+      ]
+    },
+    "alchemist_gem_source": {
+      "providers": [
+        {
+          "tree": "spell/stone-alchemy",
+          "talents": [
+            "T_EXTRACT_GEMS"
+          ],
+          "fallback": true
+        }
+      ]
+    },
+    "insanity_source": {
+      "providers": [
+        {
+          "tree": "demented/tentacles",
+          "talents": [
+            "T_MUTATED_HAND"
+          ]
+        },
+        {
+          "tree": "demented/slow-death",
+          "talents": [
+            "T_DIGEST"
+          ]
+        },
+        {
+          "tree": "demented/path-of-horror",
+          "talents": [
+            "T_CARRION_FEET"
+          ]
+        },
+        {
+          "tree": "demented/madness",
+          "talents": [
+            "T_DARK_WHISPERS"
+          ],
+          "fallback": true
+        },
+        {
+          "tree": "demented/scourge-drake",
+          "talents": [
+            "T_TENTACLED_WINGS"
+          ]
+        },
+        {
+          "tree": "demented/void",
+          "talents": [
+            "T_BLACK_MONOLITH"
+          ]
+        }
+      ]
+    },
+    "entropic_backlash_source": {
+      "providers": [
+        {
+          "tree": "demented/nether",
+          "talents": [
+            "T_NETHERBLAST"
+          ],
+          "fallback": true
+        },
+        {
+          "tree": "demented/entropy",
+          "talents": [
+            "T_POWER_OVERWHELMING"
+          ]
+        }
+      ]
+    },
+    "undead_minion_source": {
+      "providers": [
+        {
+          "tree": "spell/master-of-bones",
+          "talents": [
+            "T_CALL_OF_THE_CRYPT"
+          ],
+          "fallback": true
+        },
+        {
+          "tree": "spell/master-of-flesh",
+          "talents": [
+            "T_CALL_OF_THE_MAUSOLEUM"
+          ]
+        },
+        {
+          "tree": "spell/dreadmaster",
+          "talents": [
+            "T_DREAD"
+          ]
+        }
+      ]
+    },
+    "alchemy_golem_source": {
+      "providers": [
+        {
+          "tree": "spell/golemancy",
+          "talents": [
+            "T_GOLEM_POWER"
+          ],
+          "fallback": true
+        }
+      ]
+    }
+  },
+  "functional_dependencies": {
+    "cursed/advanced-shadowmancy": [
+      "shadow_source"
     ],
-    "chronomancy/temporal-hounds": [
-      {
-        "tree": "chronomancy/temporal-hounds",
-        "talents": [
-          "T_TEMPORAL_HOUNDS"
-        ]
-      }
-    ],
-    "psionic/thought-forms": [
-      {
-        "tree": "psionic/thought-forms",
-        "talents": [
-          "T_THOUGHT_FORMS"
-        ]
-      }
+    "cursed/one-with-shadows": [
+      "shadow_source"
     ],
     "wild-gift/summon-advanced": [
-      {
-        "tree": "wild-gift/summon-advanced",
-        "talents": [
-          "T_MASTER_SUMMONER"
-        ]
-      }
+      "summon_source"
     ],
-    "chronomancy/speed-control": [
-      {
-        "tree": "chronomancy/speed-control",
-        "talents": [
-          "T_TIME_DILATION"
-        ]
-      }
+    "wild-gift/summon-augmentation": [
+      "summon_source"
+    ],
+    "chronomancy/spellbinding": [
+      "chronomancy_spell"
+    ],
+    "technique/finishing-moves": [
+      "combo_source"
+    ],
+    "spell/explosives": [
+      "alchemist_gem_source"
+    ],
+    "demented/beyond-sanity": [
+      "insanity_source"
+    ],
+    "demented/oblivion": [
+      "entropic_backlash_source"
+    ],
+    "spell/master-necromancer": [
+      "undead_minion_source"
     ],
     "spell/advanced-golemancy": [
-      {
-        "tree": "spell/golemancy",
-        "talents": [
-          "T_GOLEM_POWER"
-        ]
-      }
+      "alchemy_golem_source"
+    ]
+  },
+  "anchor_talents": {
+    "cursed/shadows": [
+      "T_CALL_SHADOWS"
+    ],
+    "chronomancy/temporal-hounds": [
+      "T_TEMPORAL_HOUNDS"
+    ],
+    "psionic/thought-forms": [
+      "T_THOUGHT_FORMS"
+    ],
+    "chronomancy/speed-control": [
+      "T_TIME_DILATION"
+    ],
+    "spell/golemancy": [
+      "T_GOLEM_POWER"
+    ],
+    "spell/master-of-bones": [
+      "T_CALL_OF_THE_CRYPT"
+    ],
+    "spell/master-of-flesh": [
+      "T_CALL_OF_THE_MAUSOLEUM"
+    ],
+    "spell/dreadmaster": [
+      "T_DREAD"
+    ],
+    "demented/doom": [
+      "T_PROPHECY"
+    ],
+    "demented/friend-of-the-worm": [
+      "T_WORM_THAT_WALKS"
+    ],
+    "demented/madness": [
+      "T_DARK_WHISPERS"
+    ],
+    "demented/rift": [
+      "T_REALITY_FRACTURE"
+    ],
+    "demented/slow-death": [
+      "T_DIGEST"
+    ],
+    "demented/tentacles": [
+      "T_MUTATED_HAND"
+    ],
+    "demented/void": [
+      "T_VOID_STARS"
+    ],
+    "demented/chronophage": [
+      "T_ATROPHY"
+    ],
+    "demented/calamity": [
+      "T_JINXED_TOUCH"
+    ],
+    "demented/entropy": [
+      "T_ENTROPIC_GIFT"
     ]
   }
 }

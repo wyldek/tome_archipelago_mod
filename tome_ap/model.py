@@ -8,7 +8,7 @@ from typing import Any, Mapping
 GAME = "Tales of Maj'Eyal"
 PROTOCOL_VERSION = 1
 CONTRACT_VERSION = 3
-CATALOG_VERSION = 3
+CATALOG_VERSION = 4
 MAX_SNAPSHOT_BYTES = 8 * 1024 * 1024
 MAX_RECEIPTS = 100_000
 STAT_KEYS = ("str", "dex", "con", "mag", "wil", "cun")

@@ -209,37 +209,77 @@ def _resolve_prodigy_bonus(catalog: Catalog, prodigies: list[str], active: set[s
     return bonus_order, resolved
 
 
-def _resolve_support_dependencies(catalog: Catalog, active_tree_keys: list[str]):
-    """Resolve transitive hard talent dependencies for an already selected build.
+def _resolve_support_dependencies(
+    catalog: Catalog,
+    active_tree_keys: list[str],
+    ready_tree_keys: list[str] | None = None,
+):
+    """Resolve hard dependencies, functional capabilities, and anchor talents.
 
-    A dependency may point to another tree or to a talent in the same tree.
-    Required talents are precollected exactly once, while newly introduced
-    trees contribute all of their remaining ranks to the shuffled pool.
+    ``active_tree_keys`` contains every tree that belongs to the generated build,
+    including prodigy-gated bonus trees. ``ready_tree_keys`` contains categories
+    available at character creation (normally random + mandatory trees). A hard
+    or capability dependency promotes its provider to a support tree when needed
+    so the enabling talent is actually usable when the dependent tree is usable.
+
+    All enabling/anchor ranks are precollected exactly once. Newly introduced
+    support trees contribute their remaining ranks to the shuffled pool.
     """
     active = set(active_tree_keys)
-    queue = list(active_tree_keys)
+    ready = set(active_tree_keys if ready_tree_keys is None else ready_tree_keys)
+    queue = list(dict.fromkeys(active_tree_keys))
     processed: set[str] = set()
     support_order: list[str] = []
+    support_seen: set[str] = set()
     precollects: list[str] = []
     precollect_seen: set[str] = set()
+
+    def precollect(symbol: str) -> None:
+        key = "talent:" + symbol
+        if key not in precollect_seen:
+            precollect_seen.add(key)
+            precollects.append(key)
+
+    def make_ready(tree: str) -> None:
+        if tree not in active:
+            active.add(tree)
+            queue.append(tree)
+        elif tree not in processed and tree not in queue:
+            queue.append(tree)
+        if tree not in ready:
+            ready.add(tree)
+            if tree not in support_seen:
+                support_seen.add(tree)
+                support_order.append(tree)
 
     while queue:
         source = queue.pop(0)
         if source in processed:
             continue
         processed.add(source)
+
+        # Same-tree anchors establish mechanics that later ranks in the category
+        # expect to exist (e.g. Call Shadows, Prophecy, Temporal Hounds).
+        for sym in catalog.anchor_talents.get(source, ()):
+            precollect(sym)
+
+        # Explicit exact-tree dependencies remain useful for relationships that
+        # are not naturally expressed as a reusable capability.
         for dep in catalog.support_dependencies.get(source, []):
-            if dep.required_tree not in active:
-                active.add(dep.required_tree)
-                support_order.append(dep.required_tree)
-                queue.append(dep.required_tree)
-            elif dep.required_tree not in processed:
-                queue.append(dep.required_tree)
+            make_ready(dep.required_tree)
             for sym in dep.required_talents:
-                key = "talent:" + sym
-                if key not in precollect_seen:
-                    precollect_seen.add(key)
-                    precollects.append(key)
+                precollect(sym)
+
+        # Functional dependencies choose an already-ready provider when one was
+        # rolled naturally. Otherwise use the single reviewed fallback provider.
+        for capability in catalog.functional_dependencies.get(source, ()):
+            providers = catalog.capability_providers[capability]
+            provider = next((p for p in providers if p.tree in ready), None)
+            if provider is None:
+                provider = next(p for p in providers if p.fallback)
+                make_ready(provider.tree)
+            for sym in provider.required_talents:
+                precollect(sym)
 
     return support_order, precollects
 
@@ -284,9 +324,12 @@ def create_build(catalog: Catalog, settings: Settings, rng: Random) -> Build:
     prodigies = [i.key for i in rng.sample(catalog.prodigies, settings.prodigy_count)]
     active = {t.key for t in random_chosen}.union(mandatory)
     bonus_trees, prodigy_bonus = _resolve_prodigy_bonus(catalog, prodigies, active, rng)
-    selected_before_support = [t.key for t in random_chosen] + mandatory + bonus_trees
-    support_trees, support_precollects = _resolve_support_dependencies(catalog, selected_before_support)
-    active_tree_keys = selected_before_support + support_trees
+    base_ready_trees = [t.key for t in random_chosen] + mandatory
+    selected_before_support = base_ready_trees + bonus_trees
+    support_trees, support_precollects = _resolve_support_dependencies(
+        catalog, selected_before_support, base_ready_trees
+    )
+    active_tree_keys = list(dict.fromkeys(selected_before_support + support_trees))
 
     full: list[str] = []
     for tree_key in active_tree_keys:
